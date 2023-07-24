@@ -4,11 +4,11 @@ from typing import Optional
 import tatsu
 from tatsu.exceptions import FailedParse
 
-from app.abstract import AbstractController
-from app.error import InvalidModelData
-from app.interfaces.reader import AGReader
-from app.struct.graph import Graph
-from app.struct.vertex import Vertex, VertexEdge
+from agtool.abstract import AbstractController
+from agtool.error import InvalidModelData
+from agtool.interfaces.reader import AGReader
+from agtool.struct.graph import Graph
+from agtool.struct.vertex import Vertex, VertexEdge
 
 
 class AGTxtReader(AGReader):
@@ -143,7 +143,7 @@ class AGTxtReader(AGReader):
     '''
 
     # The default set of macros for arrows.
-    __DEFAULT_MACROS = { '=': 'rec' }
+    __DEFAULT_MACROS = {'=': 'rec'}
 
     @property
     def name(self) -> str:
@@ -200,7 +200,7 @@ class AGTxtReader(AGReader):
         the value is the substitution.
         """
 
-        vertex_types: dict[str, str] = { }
+        vertex_types: dict[str, str] = {}
         """
         Stores vertex type definitions. When set_types is invoked on a line,
         the type for the vertex is stored here, this is then passed to the
@@ -215,7 +215,7 @@ class AGTxtReader(AGReader):
         will therefore throw an error.
         """
 
-        vertex_attributes: dict[str, dict[str, any]] = { }
+        vertex_attributes: dict[str, dict[str, any]] = {}
         """
         Stores attributes for vertices. When set_attributes is invoked,
         the attributes are stored here, then this is passed into the vertex
@@ -228,7 +228,7 @@ class AGTxtReader(AGReader):
         error if it is subsequently referenced.
         """
 
-        vertex_edges: dict[str, list[VertexEdge]] = { }
+        vertex_edges: dict[str, list[VertexEdge]] = {}
         """
         Stores the edges for vertices. When set_edges is invoked on a line,
         each LHS vertex (vertexList1) is stored (or updated) as a key here,
@@ -249,7 +249,7 @@ class AGTxtReader(AGReader):
             # already. If not, initialize an empty dictionary to
             # store the ones defined in the model.
             if assign_to not in vertex_attributes:
-                vertex_attributes[assign_to] = { }
+                vertex_attributes[assign_to] = {}
 
             # Now, assign the given key-value attributes for the
             # vertex.

@@ -19,5 +19,5 @@ sys.path.append(abspath(dirname(dirname(abspath(__file__)))))
 # Do not re-order this import, this needs to be after the system path amendment
 # to ensure that this file being placed inside the bin/ directory does not
 # break resolution.
-import app.__main__
-app.__main__.main()
+import agtool.__main__
+agtool.__main__.main()
