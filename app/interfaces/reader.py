@@ -16,7 +16,6 @@ class AGReader(AGPlugin):
     @abstractmethod
     def default_file_extension(self) -> str:
         """The default file extension that this reader parses."""
-        pass
 
     def __init__(self, controller: AbstractController):
         super().__init__(controller)
@@ -31,7 +30,6 @@ class AGReader(AGPlugin):
         name, or a URL). This is a textual label, generally intended for error
         messages.
         :param input_data: The input data to parse.
-        :return: Either the graph, if one was able to be determined from the
+        :return: Either the graph, if one could be determined from the
         input, or None if the input was empty.
         """
-        pass

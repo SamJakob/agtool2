@@ -51,8 +51,8 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v2
         with:
-          # Upload all documentation for the 'app' module.
-          path: './docs/app'
+          # Upload all documentation.
+          path: './docs/'
 
   deploy:
       runs-on: ubuntu-latest

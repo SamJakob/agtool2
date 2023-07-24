@@ -7,6 +7,7 @@ docs:
 docs\:silent:
 	rm -rf docs/
 	pdoc --html --output-dir docs/ app
+	echo "<meta http-equiv=\"refresh\" content=\"0; url=https://nbtx-2.gitbook.io/agtool/\" /><script>window.location.href='https://nbtx-2.gitbook.io/agtool/';</script>" > docs/index.html
 
 # PHONY targets (always build - i.e., don't attempt to cache for these targets)
 .PHONY: docs docs\:silent clean
