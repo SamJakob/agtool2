@@ -1,0 +1,75 @@
+name: Generate and Deploy Documentation
+
+# Run whenever the default branch is updated.
+on:
+  push:
+    branches: [ "master" ]
+
+  # Allow manually triggering workflow.
+  workflow_dispatch:
+
+
+# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
+permissions:
+  # Read repository contents (and all branches, releases, etc.,)
+  contents: read
+  # Full read-write access for GitHub Pages
+  pages: write
+  # Permission to request OpenID Connect JWT for the relevant account
+  id-token: write
+
+# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
+# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Check out the repository.
+      - uses: actions/checkout@v3
+
+      # Set up a recent Python version.
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v3
+        with:
+          python-version: '3.11'
+          cache: 'pip' # Cache pip dependencies
+        
+      # Install Python dependencies with pip.
+      - run: pip install -r requirements.txt
+
+      # Generate documentation with :silent
+      # (No need to open a browser on GitHub Actions Runner, and it'd probably cause issues anyway).
+      - name: Run documentation generate command
+        run: make docs:silent
+      
+      # Upload the generated documentation from the repository as an artifact.
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2
+        with:
+          # Upload all documentation for the 'app' module.
+          path: './docs/app'
+
+  deploy:
+      runs-on: ubuntu-latest
+      
+      # Naturally, we need to generate the documentation before we upload it!
+      needs: generate
+      
+      environment:
+        name: github-pages
+        url: ${{ steps.deployment.outputs.page_url }}
+      
+      steps:
+        # Set up GitHub Pages (configures access with token, etc.,).
+        - name: Setup Pages
+          uses: actions/configure-pages@v3
+
+        # Deploy the generated artifact.
+        - name: Deploy to GitHub Pages
+          id: deployment
+          uses: actions/deploy-pages@v2

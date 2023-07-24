@@ -1,0 +1,2 @@
+# Ignore generated documentation (it'll probably be stale if checked in anyway).
+docs/

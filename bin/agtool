@@ -1,0 +1,23 @@
+#!/usr/bin/env python3
+
+# On *nix systems we can just use the shebang (line 1) to set the current
+# interpreter as a Python interpreter and execute the main function directly.
+
+# This has the added bonus of allowing us to locate the Python files reliably.
+
+# This launcher file is placed inside bin/ to allow that directory to be added
+# to a user's PATH without inadvertently adding all the other files.
+
+# ---
+
+# Add the project path (parent of the current directory) to the system import
+# path.
+import sys
+from os.path import dirname, abspath
+sys.path.append(abspath(dirname(dirname(abspath(__file__)))))
+
+# Do not re-order this import, this needs to be after the system path amendment
+# to ensure that this file being placed inside the bin/ directory does not
+# break resolution.
+import app.__main__
+app.__main__.main()

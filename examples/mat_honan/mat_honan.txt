@@ -1,0 +1,42 @@
+# Vertex types
+
+device: iPhone_locked, iPad_locked, iPhone, iPad
+support: Apple_Support, Amazon_Support
+account: iCloud, Twitter, Amazon, Gmail
+pw: CC_num, pwd1, pwd2, pwd3, pwd4, secQ, PIN, billing_addr
+device: CC
+
+# Access relations
+
+## Passwords give access to accounts.
+## We use -> for the standard access relation.
+## We do not model usernames for simplicity and readability.
+
+pwd4 -> Gmail
+pwd1 -> iCloud
+pwd2 -> Amazon
+pwd3 -> Twitter
+
+## We use => for recovery relations.
+## In the following line all three items are necessary to recover
+## access to iCloud.
+Apple_Support, CC_num, billing_addr => iCloud
+
+Amazon -> CC_num
+Amazon_Support, billing_addr => Amazon
+
+Apple_Support, secQ => iCloud
+iCloud => Gmail
+Gmail => Twitter
+
+## In the following line the iPhone gives access to three accounts
+## iPhone represents the unlocked iPhone. 
+iPhone -> Gmail, iCloud, Twitter
+iPad -> Gmail, iCloud
+
+## To unlock the iPhone, a PIN and the (locked) iPhone are necessary.
+PIN, iPhone_locked -> iPhone
+PIN, iPad_locked -> iPad
+
+## The physical credit card provides access to the credit card number
+CC -> CC_num
