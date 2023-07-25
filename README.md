@@ -8,9 +8,9 @@
 `agtool` (account/access graphs tool) is a tool to visualize, compute and
 transform account access graphs based on an input specification.
 
-## Scripts
-- Build documentation: `make docs`
-  - By default, this opens the browser. To avoid this, use `make docs:silent`.
+<div style="text-align: center">
+  <a href="https://nbtx-2.gitbook.io/agtool/" target="_blank">User Manual</a> | <a href="https://samjakob.github.io/agtool2/" target="_blank">Developer (API) Documentation</a>
+</div>
 
 ## Dependencies
 - For Python dependencies, see `requirements.txt`, these can be installed with
@@ -40,3 +40,7 @@ is stored in `app/__init__.py`.
 - The main executable file is `app/__main__.py` which fetches the basic command 
   arguments and passes them to `app/cli` which serves as the main component and
   entry point of the CLI 'form factor' of the application.
+
+## Scripts
+- Build documentation: `make docs`
+  - By default, this opens the browser. To avoid this, use `make docs:silent`.
