@@ -86,12 +86,13 @@ class AGPluginRegistry(AbstractPluginRegistry):
         for root, dirs, filenames in os.walk(self.plugins_dir):
             for filename in filenames:
                 if filename.endswith(".py") \
-                        and "disabled" not in filename \
+                        and not filename.endswith("-disabled") \
                         and not filename.startswith("_"):
+
                     # Load the plugin
                     self.load_plugin_from_file(os.path.join(root, filename))
 
-        self.controller.logger.info(
+        self.controller.logger.success(
             f"Finished loading plugins. "
             f"{len(self._plugins)} plugin{'s are' if len(self._plugins) != 1 else ' is'} ready."
         )
@@ -147,7 +148,7 @@ class AGPluginRegistry(AbstractPluginRegistry):
                         # Register and instantiate the plugin.
                         plugin_type_str = f' {plugin_type.__name__}' if plugin_type is not None else ""
                         self.controller.logger.debug(
-                            f"[{os.path.basename(file)}] Found{plugin_type_str} plugin {node.name}. Instantiating..."
+                            f"Found{plugin_type_str} plugin {node.name}. Instantiating..."
                         )
 
                         # Instantiate the plugin
@@ -179,13 +180,11 @@ class AGPluginRegistry(AbstractPluginRegistry):
             existing_plugin = self._plugins[plugin.id].plugin
 
             self.controller.logger.error(
-                f"[{plugin.id}] "
                 f"Duplicate plugin ID '{plugin.id}' found. If this is the same "
                 f"plugin, please remove the duplicate. If this is a different "
                 f"plugin, please change the plugin ID."
             )
             self.controller.logger.error(
-                f"[{plugin.id}] "
                 f"Ideally, you should change the class name such that it is "
                 f"unique, but if you cannot do that, you can override the ID "
                 f"property of the plugin class to define a custom ID."
@@ -222,7 +221,6 @@ class AGPluginRegistry(AbstractPluginRegistry):
 
         plugin_type_str = f' {plugin_interface.__name__}' if plugin_interface is not AGPlugin else ""
         self.controller.logger.info(
-            f"[{plugin.id}] "
             f"Registered{plugin_type_str} plugin '{plugin.name}' (version {plugin.version}) "
             f"by {plugin.author} ({plugin.license} license)"
         )

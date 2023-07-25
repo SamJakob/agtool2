@@ -1,3 +1,4 @@
+import inspect
 import os.path
 import sys
 from datetime import datetime
@@ -9,6 +10,7 @@ from agtool.config import AppConfig, AppSupportedLogLevels
 from agtool.error import AGMissingPluginError
 from agtool.helpers.cli import AppInfo, AppInfoVersion
 from agtool.helpers.logger import LoggerType
+from agtool.interfaces.plugin import AGPlugin
 from agtool.interfaces.reader import AGReader
 from agtool.interfaces.writer import AGWriter
 
@@ -18,13 +20,39 @@ class Controller(AbstractController):
     The application controller.
     """
 
-    logger: LoggerType
-    """
-    The application logger.
+    @property
+    def logger(self) -> LoggerType:
+        """
+        The application logger.
 
-    This is a copy of loguru that has had the application name and metadata
-    bound to it.
-    """
+        This is a copy of loguru that has had the application name and metadata
+        bound to it.
+
+        If this is called from within a plugin, the logger will be automatically
+        bound to the plugin's ID.
+        """
+
+        # Read the previous stack frame and fetch the locals from it.
+        stack_frame = inspect.currentframe()
+        prev_stack_frame = stack_frame.f_back
+        prev_stack_locals = prev_stack_frame.f_locals
+
+        # If there's a 'self' in the previous stack frame, and it's an
+        # AGPlugin, then we'll use its ID as the logger name (i.e., a
+        # plugin-specific logger).
+        if 'self' in prev_stack_locals:
+            caller = prev_stack_frame.f_locals['self']
+            if issubclass(caller.__class__, AGPlugin):
+                # Render up to 20 characters of the plugin ID.
+                # The name field in the logger is limited to 30 characters, so
+                # we'll limit the plugin ID to 20 characters to leave room for
+                # the "(plugin)" suffix.
+                name = f"{caller.id[:20]} (plugin)"
+                return loguru.bind(name=name)
+
+        # Otherwise, we'll just use the application name (i.e., the
+        # application-wide logger).
+        return self._logger
 
     @property
     def debug(self) -> bool:
@@ -106,12 +134,12 @@ class Controller(AbstractController):
                        level=config.verbosity,
                        colorize=True,
                        format="<green>{time:MMM/DD/YYYY h:mm:ss A}</green>"
-                              " | <cyan>{extra[name]}</cyan>"
+                              " | <cyan>{extra[name]: <30}</cyan>"
                               " | <level>{level: <8}</level>"
                               " | <level>{message}</level>")
 
-            self.logger = loguru.bind(name=self._name)
-            self.logger.info(f"Starting {self._name} {self._version}...")
+            self._logger = loguru.bind(name=self._name)
+            self._logger.info(f"Starting {self._name} {self._version}...")
 
             # Load plugins.
             self.plugins.load_all_plugins()

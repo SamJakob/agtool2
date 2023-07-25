@@ -176,6 +176,8 @@ class AGTxtReader(AGReader):
     def read_graph(self, input_source_name: str, input_data: str) -> Optional[Graph]:
         ast: Optional
 
+        self.controller.logger.info(f"Parsing {input_source_name} as agtool format...")
+
         try:
             ast = self.model.parse(input_data)
         except FailedParse as ex:
@@ -191,6 +193,7 @@ class AGTxtReader(AGReader):
             ).with_traceback(None) from None
 
         if ast is None:
+            self.controller.logger.warning(f"{input_source_name} is empty... Producing empty graph.")
             return None
 
         # Store the parsed information.

@@ -1,4 +1,5 @@
 import os.path
+import sys
 from typing import Optional, Union
 
 
@@ -66,6 +67,27 @@ def write_file_from_data(file_path: str, contents: Union[str, bytes], working_di
     else:
         raise ValueError(f"Invalid file contents. It must be either a string (str) or bytes (bytes), "
                          f"but was \"{type(contents)}\".")
+
+
+def write_stdout_from_data(contents: Union[str, bytes]) -> None:
+    """
+    Writes data to stdout. (Data is either a string or bytes, the type of which
+    is inferred from the type of the contents argument.)
+    """
+
+    # Write the contents to stdout, depending on the type of the contents.
+    # (We'll use sys.stdout.buffer.write() for bytes, and sys.stdout.write()
+    # for strings.)
+    if isinstance(contents, str):
+        sys.stdout.write(contents)
+    elif isinstance(contents, bytes):
+        sys.stdout.buffer.write(contents)
+    else:
+        raise ValueError(f"Invalid file contents. It must be either a string (str) or bytes (bytes), "
+                         f"but was \"{type(contents)}\".")
+
+    # Then, flush the buffer.
+    sys.stdout.flush()
 
 
 def replace_file_extension(filename: str, new_extension: str) -> str:

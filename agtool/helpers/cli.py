@@ -107,7 +107,7 @@ def parse_cli_args(args: Sequence[str]) -> AppConfig:
     parser.add_argument('input', help="sets the input file to read from",
                         action="store")
 
-    parser.add_argument('--output',
+    parser.add_argument('--output', '--output-file',
                         action="store", default=None,
                         help="sets the output file to write to; [default: <input_file>.png]")
 

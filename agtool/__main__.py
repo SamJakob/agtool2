@@ -5,7 +5,8 @@ from typing import Optional
 from agtool.core import Controller
 from agtool.error import AGError
 from agtool.helpers.cli import get_app_info, parse_cli_args
-from agtool.helpers.file import read_file_as_string, replace_file_extension, write_file_from_data
+from agtool.helpers.file import read_file_as_string, replace_file_extension, write_file_from_data, \
+    write_stdout_from_data
 
 
 # Welcome to the main executable file for this project. This launches the CLI
@@ -52,6 +53,10 @@ def main(argv=None):
             # Exit after handling the override action.
             exit(0)
 
+        # Check if the input file exists.
+        if not os.path.exists(config.input_file):
+            raise AGError(f"Input file \"{config.input_file}\" does not exist.")
+
         # Now, process the given input file.
 
         # If input_format is not specified, try to infer it from the file
@@ -83,8 +88,8 @@ def main(argv=None):
         if config.output_format and config.output_file:
             # If the output_file is specified (i.e., not empty) but does not have
             # a file extension, then we'll append the output_format to the
-            # output_file.
-            if len(output_file_ext) == 0:
+            # output_file (provided it is not a URI).
+            if len(output_file_ext) == 0 and ('://' not in config.output_file):
                 config.output_file = replace_file_extension(config.output_file, config.output_format)
 
             # If we have both the output_format and the output_file, then we'll
@@ -129,9 +134,24 @@ def main(argv=None):
             f"output file \"{os.path.basename(config.output_file)}\" (kind: {config.output_format})."
         )
 
-        # Write the graph to the output file.
+        # Produce the output data.
         output_data = writer.write_graph(graph, destination_label=config.output_file)
-        write_file_from_data(config.output_file, output_data, working_dir=controller.base_path)
+
+        # Attempt to write the output data to the output file.
+        try:
+            if config.output_file.startswith("stdout://"):
+                # If the output file is stdout://, then we'll write to standard
+                # output.
+                write_stdout_from_data(output_data)
+            else:
+                # Otherwise, we'll write to a file.
+                write_file_from_data(config.output_file, output_data, working_dir=controller.base_path)
+                controller.logger.success(f"Successfully wrote to output file: "
+                                          f"{config.output_file} (kind: {config.output_format})")
+        except PermissionError:
+            controller.logger.error("There was a permission error when writing to the output file.")
+            controller.logger.error("If this is unexpected, is the file in use?")
+            raise AGError(f"Permission denied when writing to output file: {config.output_file}")
 
     except AGError as error:
         if controller is not None:

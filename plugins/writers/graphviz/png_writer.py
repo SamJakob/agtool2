@@ -1,4 +1,5 @@
 import subprocess
+from typing import Optional
 
 from agtool.core import Controller
 from agtool.error import AGPluginExternalError
@@ -40,7 +41,7 @@ class AGPNGWriter(AGWriter):
         plugin interacts with other plugins from the plugin registry.)
         """
 
-    def write_graph(self, graph: Graph, destination_label: str) -> bytes:
+    def write_graph(self, graph: Graph, destination_label: str, options: Optional[dict[str, str]] = None) -> bytes:
         """
         Called to write a graph to a PNG file.
         This uses the GraphViz renderer (i.e., `AGGraphvizWriter`) to render the graph
@@ -51,12 +52,17 @@ class AGPNGWriter(AGWriter):
         :param destination_label: The name of the output destination
         (e.g., a file name, or a URL). This is a textual label, generally
         intended for error messages.
+        :param options: An optional set of parameters to pass to the writer
+        (e.g., for specifying theming options).
         :return: The output data (as a string).
         """
 
         # Use the GraphViz renderer to render the graph as a DOT file.
         dot_renderer = self.controller.writer_for("dot")
-        dot_data_str: str = dot_renderer.write_graph(graph, destination_label)
+        dot_data_str: str = dot_renderer.write_graph(graph,
+                                                     destination_label=destination_label,
+                                                     options=options)
+
         dot_data: bytes = dot_data_str.encode("utf-8")
 
         # Use the GraphViz command-line tool to render the DOT file as a PNG file.
@@ -74,7 +80,7 @@ class AGPNGWriter(AGWriter):
                                 f"rendering the output PNG file ({result.returncode}).",
                 )
 
-            self.controller.logger.info("Rendering completed successfully.")
+            self.controller.logger.success("Rendering completed successfully.")
 
             return result.stdout
         except FileNotFoundError:
