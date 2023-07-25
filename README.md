@@ -1,16 +1,14 @@
-<div style="text-align: center;">
-  <a href="https://github.com/SamJakob/agtool2">
+<h1 align="center"><a href="https://github.com/SamJakob/agtool2">
     <img src="./docs-gen/logo.svg" alt="agtool logo" width="484" />
-  </a>
-</div>
+  </a></h1>
+<p align="center"><code>agtool</code> (account/access graphs tool) is a tool to visualize, compute and
+transform account access graphs based on an input specification.</p>
 
-# agtool
-`agtool` (account/access graphs tool) is a tool to visualize, compute and
-transform account access graphs based on an input specification.
-
-<div style="text-align: center">
+<p align="center">
   <a href="https://nbtx-2.gitbook.io/agtool/" target="_blank">User Manual</a> | <a href="https://samjakob.github.io/agtool2/" target="_blank">Developer (API) Documentation</a>
-</div>
+</p>
+
+---
 
 ## Dependencies
 - For Python dependencies, see `requirements.txt`, these can be installed with
