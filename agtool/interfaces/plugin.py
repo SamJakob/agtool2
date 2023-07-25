@@ -38,26 +38,14 @@ class AGPlugin(AbstractPlugin):
     def load_all_extensions(self,
                             subclass_of: PluginExtensionGeneric) -> list[PluginExtensionGeneric]:
         """
-        Loads all extensions that are subclasses of the given class.
-        This will search the plugin registry's plugin directory recursively for
-        all plugins that are subclasses of the given class and load them using
-        the `load_extension_from_file` method.
-
-        :param subclass_of: The class that the extensions must be subclasses of.
+        See `agtool.abstract.plugin_registry.AbstractPluginRegistry.load_all_extensions`
         """
-        pass
+        return self.controller.plugins.load_all_extensions(self, subclass_of)
 
     def load_extension_from_file(self,
                                  file: str,
                                  subclass_of: PluginExtensionGeneric) -> list[PluginExtensionGeneric]:
         """
-        Loads any extensions from the given file that are subclasses of the
-        given class.
-
-        Note that this function returns a list of extensions, as a single file
-        may contain multiple extensions.
-
-        :param file: The file (path) to load extensions from.
-        :param subclass_of: The class that the extensions must be subclasses of.
+        See `agtool.abstract.plugin_registry.AbstractPluginRegistry.load_extension_from_file`
         """
-        pass
+        return self.controller.plugins.load_extension_from_file(self, file, subclass_of)

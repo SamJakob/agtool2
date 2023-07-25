@@ -11,7 +11,7 @@ from typing import Dict, List, Type, cast
 from tabulate import tabulate
 
 import agtool.interfaces
-from agtool.abstract import AbstractPluginGeneric, AbstractPluginRegistry
+from agtool.abstract import AbstractPluginGeneric, AbstractPluginRegistry, AbstractPluginExtensionGeneric
 from agtool.core import Controller
 from agtool.error import AGPluginConflictError, AGPluginError
 from agtool.interfaces.plugin import AGPlugin
@@ -79,6 +79,84 @@ class AGPluginRegistry(AbstractPluginRegistry):
         self._plugin_interfaces = _plugin_interfaces
         """The set of interfaces that plugins can implement."""
 
+    def load_all_extensions(self,
+                            plugin: AGPlugin,
+                            subclass_of: AbstractPluginExtensionGeneric) -> List[AbstractPluginExtensionGeneric]:
+        self.controller.logger.info(f"Scanning for extensions for \"{plugin.name}\" in {self.plugins_dir}...")
+
+        extensions = []
+
+        # Load all extensions from the plugins directory
+        for root, dirs, filenames in os.walk(self.plugins_dir):
+            for filename in filenames:
+                if filename.endswith(".py") \
+                        and not filename.endswith("-disabled") \
+                        and not filename.startswith("_"):
+
+                    # Add the extensions from the file to the list of extensions discovered.
+                    extensions.extend(self.load_extension_from_file(plugin, os.path.join(root, filename),
+                                                                    subclass_of=subclass_of))
+
+        if len(extensions) > 0:
+            self.controller.logger.success(
+                f"Finished loading extensions for \"{plugin.name}\". "
+                f"{len(extensions)} extension{'s are' if len(extensions) != 1 else ' is'} ready."
+            )
+        else:
+            self.controller.logger.info(
+                f"No extensions for \"{plugin.name}\" were found."
+            )
+
+        return extensions
+
+    def load_extension_from_file(self,
+                                 plugin: AGPlugin,
+                                 file: str,
+                                 subclass_of: AbstractPluginExtensionGeneric) -> list[AbstractPluginExtensionGeneric]:
+
+        extensions = []
+
+        self.controller.logger.trace(f"Looking for extensions for \"{plugin.name}\" in {file}...")
+
+        # Attempt to derive a spec and module from the file
+        spec = importlib.util.spec_from_file_location(os.path.basename(file), file)
+        file_module = importlib.util.module_from_spec(spec)
+
+        # Find the list of valid superclasses for the extension.
+        valid_superclasses = [subclass_of.__name__]
+        valid_superclasses.extend([clazz.__name__ for clazz in subclass_of.__subclasses__()])
+
+        try:
+            file_source = parse_ast(inspect.getsource(file_module))
+            file_imported = False
+            """Whether the file has been imported into the runtime yet."""
+
+            for node in file_source.body:
+                # If the node is a class definition, check if one of its bases is
+                # subclass_of or a subclass of subclass_of.
+                if isinstance(node, AstClassDef):
+                    # Get the list of base classes.
+                    bases = [base.id for base in cast(any, node.bases)]
+
+                    if subclass_of.__name__ in bases:
+                        # Load the plugin module. If it has already been loaded,
+                        # we can skip it. If file_imported is False, we can
+                        # assume that the plugin module has not been loaded yet.
+                        if not file_imported:
+                            spec.loader.exec_module(file_module)
+
+                            # Mark that the file has been imported.
+                            file_imported = True
+
+                        # Then, add the extension to the list of extensions.
+                        extensions.append(getattr(file_module, node.name)(plugin=plugin))
+
+        except OSError:
+            # Do nothing if the source cannot be obtained.
+            pass
+
+        return extensions
+
     def load_all_plugins(self):
         self.controller.logger.info(f"Scanning for plugins in {self.plugins_dir}...")
 
@@ -88,7 +166,6 @@ class AGPluginRegistry(AbstractPluginRegistry):
                 if filename.endswith(".py") \
                         and not filename.endswith("-disabled") \
                         and not filename.startswith("_"):
-
                     # Load the plugin
                     self.load_plugin_from_file(os.path.join(root, filename))
 
@@ -147,8 +224,8 @@ class AGPluginRegistry(AbstractPluginRegistry):
 
                         # Register and instantiate the plugin.
                         plugin_type_str = f' {plugin_type.__name__}' if plugin_type is not None else ""
-                        self.controller.logger.debug(
-                            f"Found{plugin_type_str} plugin {node.name}. Instantiating..."
+                        self.controller.logger.info(
+                            f"Attempting to initialize class {node.name} as a(n){plugin_type_str} plugin..."
                         )
 
                         # Instantiate the plugin
@@ -164,7 +241,7 @@ class AGPluginRegistry(AbstractPluginRegistry):
             pass
 
         if file_has_plugin:
-            self.controller.logger.debug(
+            self.controller.logger.success(
                 f"Successfully registered {loaded_plugins} plugin{'s' if loaded_plugins != 1 else ''} from "
                 f"{os.path.basename(file)}"
             )

@@ -1,13 +1,10 @@
 import os.path
 from typing import Optional
 
+from agtool.core import Controller
 from agtool.helpers.text import to_upper_camel_case
 from agtool.interfaces.writer import AGWriter
 from agtool.struct.graph import Graph
-
-
-class AGGraphvizWriterTheme:
-    pass
 
 
 class AGGraphvizWriter(AGWriter):
@@ -34,6 +31,13 @@ class AGGraphvizWriter(AGWriter):
     @property
     def default_file_extension(self) -> str:
         return "dot"
+
+    def __init__(self, controller: Controller):
+        # Initialize the plugin.
+        super().__init__(controller)
+
+        # Locate any themes for this plugin.
+        self.themes = self.load_all_extensions(subclass_of=AGGraphvizWriterTheme)
 
     def write_graph(self, graph: Graph, destination_label: str, options: Optional[dict[str, str]] = None) -> str:
         """
@@ -208,3 +212,10 @@ digraph {graph_name} {{
             output.append(f"{key}=\"{value}\"{';' if statements else ''}{comment}")
 
         return join_char.join(output)
+
+
+class AGGraphvizWriterTheme:
+
+    def __init__(self, plugin: AGGraphvizWriter):
+        self.plugin = plugin
+        """The `AGGraphvizWriter` plugin instance that this theme is for."""

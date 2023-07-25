@@ -34,21 +34,25 @@ class Controller(AbstractController):
 
         # Read the previous stack frame and fetch the locals from it.
         stack_frame = inspect.currentframe()
-        prev_stack_frame = stack_frame.f_back
-        prev_stack_locals = prev_stack_frame.f_locals
 
-        # If there's a 'self' in the previous stack frame, and it's an
-        # AGPlugin, then we'll use its ID as the logger name (i.e., a
-        # plugin-specific logger).
-        if 'self' in prev_stack_locals:
-            caller = prev_stack_frame.f_locals['self']
-            if issubclass(caller.__class__, AGPlugin):
-                # Render up to 20 characters of the plugin ID.
-                # The name field in the logger is limited to 30 characters, so
-                # we'll limit the plugin ID to 20 characters to leave room for
-                # the "(plugin)" suffix.
-                name = f"{caller.id[:20]} (plugin)"
-                return loguru.bind(name=name)
+        prev_stack_frame = stack_frame.f_back
+        while prev_stack_frame is not None:
+            prev_stack_locals = prev_stack_frame.f_locals
+
+            # If there's a 'self' in the previous stack frame, and it's an
+            # AGPlugin, then we'll use its ID as the logger name (i.e., a
+            # plugin-specific logger).
+            if 'self' in prev_stack_locals:
+                caller = prev_stack_frame.f_locals['self']
+                if issubclass(caller.__class__, AGPlugin):
+                    # Render up to 20 characters of the plugin ID.
+                    # The name field in the logger is limited to 30 characters, so
+                    # we'll limit the plugin ID to 20 characters to leave room for
+                    # the "(plugin)" suffix.
+                    name = f"{caller.id[:20]} (plugin)"
+                    return loguru.bind(name=name)
+
+            prev_stack_frame = prev_stack_frame.f_back
 
         # Otherwise, we'll just use the application name (i.e., the
         # application-wide logger).

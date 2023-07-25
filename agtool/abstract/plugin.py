@@ -1,6 +1,9 @@
 # DO NOT IMPORT THIS FILE DIRECTLY. IMPORT FROM agtool.abstract INSTEAD.
 
-from abc import ABC
+from abc import ABC, abstractmethod
+from typing import TypeVar
+
+AbstractPluginExtensionGeneric = TypeVar('AbstractPluginExtensionGeneric')
 
 
 class AbstractPlugin(ABC):
@@ -42,3 +45,21 @@ class AbstractPlugin(ABC):
     def license(self) -> str:
         """The license of the plugin"""
         return "Unknown"
+
+    @abstractmethod
+    def load_all_extensions(self,
+                            subclass_of: AbstractPluginExtensionGeneric) -> list[AbstractPluginExtensionGeneric]:
+        """
+        See `agtool.abstract.plugin_registry.AbstractPluginRegistry.load_all_extensions`
+        """
+
+    @abstractmethod
+    def load_extension_from_file(self,
+                                 file: str,
+                                 subclass_of: AbstractPluginExtensionGeneric) -> list[AbstractPluginExtensionGeneric]:
+        """
+        See `agtool.abstract.plugin_registry.AbstractPluginRegistry.load_extension_from_file`
+        """
+
+
+AbstractPluginGeneric = TypeVar('AbstractPluginGeneric', bound=AbstractPlugin)
