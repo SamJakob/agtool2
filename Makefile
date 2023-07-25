@@ -6,8 +6,7 @@ docs:
 # Build documentation without opening browser.
 docs\:silent:
 	rm -rf docs/
-	pdoc --html --output-dir docs/ agtool
-	echo "<meta http-equiv=\"refresh\" content=\"0; url=https://nbtx-2.gitbook.io/agtool/\" /><script>window.location.href='https://nbtx-2.gitbook.io/agtool/';</script>" > docs/index.html
+	pdoc --search -t ./docs-gen/agtool-template --output-dir docs/ agtool plugins
 
 # PHONY targets (always build - i.e., don't attempt to cache for these targets)
 .PHONY: docs docs\:silent clean

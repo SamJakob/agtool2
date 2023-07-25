@@ -1,14 +1,14 @@
 import os.path
 import sys
 from datetime import datetime
-from typing import Optional, List
-
-from loguru import logger as _logger
+from typing import Optional
+from loguru import logger as loguru
 
 from agtool.abstract import AbstractController, AbstractPluginRegistry
 from agtool.config import AppConfig, AppSupportedLogLevels
 from agtool.error import AGMissingPluginError
 from agtool.helpers.cli import AppInfo, AppInfoVersion
+from agtool.helpers.logger import LoggerType
 from agtool.interfaces.reader import AGReader
 from agtool.interfaces.writer import AGWriter
 
@@ -18,7 +18,7 @@ class Controller(AbstractController):
     The application controller.
     """
 
-    logger: _logger
+    logger: LoggerType
     """
     The application logger.
 
@@ -101,16 +101,16 @@ class Controller(AbstractController):
         if standalone:
             # Start up logging (colored console logging goes to standard error
             # per convention). Logging can also be set up to go to a file.
-            _logger.remove()
-            _logger.add(sys.stderr,
-                        level=config.verbosity,
-                        colorize=True,
-                        format="<green>{time:MMM/DD/YYYY h:mm:ss A}</green>"
-                               " | <cyan>{extra[name]}</cyan>"
-                               " | <level>{level: <8}</level>"
-                               " | <level>{message}</level>")
+            loguru.remove()
+            loguru.add(sys.stderr,
+                       level=config.verbosity,
+                       colorize=True,
+                       format="<green>{time:MMM/DD/YYYY h:mm:ss A}</green>"
+                              " | <cyan>{extra[name]}</cyan>"
+                              " | <level>{level: <8}</level>"
+                              " | <level>{message}</level>")
 
-            self.logger = _logger.bind(name=self._name)
+            self.logger = loguru.bind(name=self._name)
             self.logger.info(f"Starting {self._name} {self._version}...")
 
             # Load plugins.

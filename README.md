@@ -1,3 +1,9 @@
+<div style="text-align: center;">
+  <a href="https://github.com/SamJakob/agtool2">
+    <img src="./docs-gen/logo.png" alt="agtool logo" width="484" />
+  </a>
+</div>
+
 # agtool
 `agtool` (account/access graphs tool) is a tool to visualize, compute and
 transform account access graphs based on an input specification.

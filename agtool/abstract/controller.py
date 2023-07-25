@@ -2,9 +2,9 @@
 
 from abc import ABC, abstractmethod
 
-from loguru import logger
-
 from agtool.abstract import AbstractPluginRegistry
+from agtool.config import AppConfig
+from agtool.helpers.logger import LoggerType
 
 
 class AbstractController(ABC):
@@ -14,7 +14,7 @@ class AbstractController(ABC):
     controller module directly which could cause circular imports.
     """
 
-    logger: logger
+    logger: LoggerType
     """The application-wide logger."""
 
     @property
@@ -43,7 +43,7 @@ class AbstractController(ABC):
 
     @property
     @abstractmethod
-    def config(self):
+    def config(self) -> AppConfig:
         """The application's current configuration"""
 
     @property

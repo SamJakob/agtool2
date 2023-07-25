@@ -52,7 +52,7 @@ class AGPluginRegistry(AbstractPluginRegistry):
         The (absolute) path to the directory containing plugins for agtool.
         """
 
-        self._plugins: Dict[str, _AGPluginRegistryEntry] = { }
+        self._plugins: Dict[str, _AGPluginRegistryEntry] = {}
         """
         The map of registered plugins.
         The key is the unique identifier of the plugin. The value is an entry
@@ -62,7 +62,7 @@ class AGPluginRegistry(AbstractPluginRegistry):
 
         # Ensure all the possible plugin interfaces are loaded
         self._load_submodules(agtool.interfaces)
-        _plugin_interfaces = { }
+        _plugin_interfaces = {}
 
         # Iterate over all the modules in agtool.interfaces, and find all the
         # classes that inherit from AGPlugin
@@ -85,7 +85,9 @@ class AGPluginRegistry(AbstractPluginRegistry):
         # Load all plugins from the plugins directory
         for root, dirs, filenames in os.walk(self.plugins_dir):
             for filename in filenames:
-                if filename.endswith(".py") and "disabled" not in filename:
+                if filename.endswith(".py") \
+                        and "disabled" not in filename \
+                        and not filename.startswith("_"):
                     # Load the plugin
                     self.load_plugin_from_file(os.path.join(root, filename))
 
@@ -254,7 +256,7 @@ class AGPluginRegistry(AbstractPluginRegistry):
                 tabulate(table, headers='firstrow', tablefmt='rounded_outline'))
 
     def render_plugins_json(self) -> str:
-        plugins = { }
+        plugins = {}
 
         for entry in self._get_all_registry_entries():
             # Ensure there is a list for the plugin type.

@@ -1,0 +1,20 @@
+{% extends "default/index.html.jinja2" %}
+
+{% block title %}agtool API Documentation{% endblock %}
+
+{% block nav %}
+    <h2>Search</h2>
+
+    <input type="search" placeholder="Search..." role="searchbox" aria-label="search"
+           pattern=".+" required>
+
+    {{ super() }}
+{% endblock %}
+
+{#{% block content %}#}
+{#    <main class="pdoc">#}
+{#        Hello, world!#}
+{#    </main>#}
+{##}
+{##}
+{#{% endblock %}#}

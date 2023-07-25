@@ -75,6 +75,7 @@ class AGPNGWriter(AGWriter):
                 )
 
             self.controller.logger.info("Rendering completed successfully.")
+
             return result.stdout
         except FileNotFoundError:
             raise AGPluginExternalError(
