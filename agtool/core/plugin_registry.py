@@ -81,7 +81,8 @@ class AGPluginRegistry(AbstractPluginRegistry):
 
     def load_all_extensions(self,
                             plugin: AGPlugin,
-                            subclass_of: AbstractPluginExtensionGeneric) -> List[AbstractPluginExtensionGeneric]:
+                            subclass_of: AbstractPluginExtensionGeneric)\
+            -> list[Type[AbstractPluginExtensionGeneric]]:
         self.controller.logger.info(f"Scanning for extensions for \"{plugin.name}\" in {self.plugins_dir}...")
 
         extensions = []
@@ -112,7 +113,8 @@ class AGPluginRegistry(AbstractPluginRegistry):
     def load_extension_from_file(self,
                                  plugin: AGPlugin,
                                  file: str,
-                                 subclass_of: AbstractPluginExtensionGeneric) -> list[AbstractPluginExtensionGeneric]:
+                                 subclass_of: AbstractPluginExtensionGeneric)\
+            -> list[Type[AbstractPluginExtensionGeneric]]:
 
         extensions = []
 
@@ -149,7 +151,7 @@ class AGPluginRegistry(AbstractPluginRegistry):
                             file_imported = True
 
                         # Then, add the extension to the list of extensions.
-                        extensions.append(getattr(file_module, node.name)(plugin=plugin))
+                        extensions.append(getattr(file_module, node.name))
 
         except OSError:
             # Do nothing if the source cannot be obtained.

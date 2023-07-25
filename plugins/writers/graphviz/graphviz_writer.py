@@ -1,5 +1,5 @@
 import os.path
-from typing import Optional
+from typing import Optional, Type
 
 from agtool.core import Controller
 from agtool.helpers.text import to_upper_camel_case
@@ -37,7 +37,8 @@ class AGGraphvizWriter(AGWriter):
         super().__init__(controller)
 
         # Locate any themes for this plugin.
-        self.themes = self.load_all_extensions(subclass_of=AGGraphvizWriterTheme)
+        self.themes: list[Type[AGGraphvizWriterTheme]] = self.load_all_extensions(subclass_of=AGGraphvizWriterTheme)
+        """The theme classes for GraphViz writers."""
 
     def write_graph(self, graph: Graph, destination_label: str, options: Optional[dict[str, str]] = None) -> str:
         """

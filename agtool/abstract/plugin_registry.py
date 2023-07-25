@@ -33,19 +33,21 @@ class AbstractPluginRegistry(ABC):
     @abstractmethod
     def load_all_extensions(self,
                             plugin: AbstractPlugin,
-                            subclass_of: AbstractPluginExtensionGeneric) -> list[AbstractPluginExtensionGeneric]:
+                            subclass_of: AbstractPluginExtensionGeneric)\
+            -> list[Type[AbstractPluginExtensionGeneric]]:
         """
-        Loads all extensions that are subclasses of the given class.
+        Loads all extension _classes_ that are subclasses of the given class.
         This will search the plugin registry's plugin directory recursively for
-        all plugins that are subclasses of the given class and load them using
+        all classes that are subclasses of the given class and load them using
         the `load_extension_from_file` method.
+
+        **Unlike with plugins, this method will not instantiate the extensions.**
 
         Please see the notes on `load_extension_from_file` for caveats on using this
         method.
 
         :param plugin: The plugin requesting the load. This is used for log
         messages and may be used in future to memoize or cache extensions.
-        It is also passed to the constructor of the extension.
         :param subclass_of: The class that the extensions must be subclasses of.
         """
         pass
@@ -54,13 +56,15 @@ class AbstractPluginRegistry(ABC):
     def load_extension_from_file(self,
                                  plugin: AbstractPlugin,
                                  file: str,
-                                 subclass_of: AbstractPluginExtensionGeneric) -> list[AbstractPluginExtensionGeneric]:
+                                 subclass_of: AbstractPluginExtensionGeneric)\
+            -> list[Type[AbstractPluginExtensionGeneric]]:
         """
-        Loads any extensions from the given file that are subclasses of the
-        given class.
+        Loads any extensions from the given file (subclasses of the given class).
 
         Note that this function returns a list of extensions, as a single file
         may contain multiple extensions.
+
+        **Unlike with plugins, this method will not instantiate the extensions.**
 
         > **Note**: This method is intended to allow you to load plugins in a similar
         > manner to how you would load plugins. There are, however, some caveats to
@@ -79,7 +83,6 @@ class AbstractPluginRegistry(ABC):
 
         :param plugin: The plugin requesting the load. This is used for log
         messages and may be used in future to memoize or cache extensions.
-        It is also passed to the constructor of the extension.
         :param file: The file (path) to load extensions from.
         :param subclass_of: The class that the extensions must be subclasses of.
         """
