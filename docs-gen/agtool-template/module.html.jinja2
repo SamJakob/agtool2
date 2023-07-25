@@ -1,0 +1,44 @@
+{% extends "default/module.html.jinja2" %}
+
+{% block module_list_link %}
+    {% set parentmodule = ".".join(module.modulename.split(".")[:-1]) %}
+    {% if parentmodule and parentmodule in all_modules %}
+        <p>
+            <a class="pdoc-button module-list-button" href="../{{ parentmodule.split(".")[-1] }}.html">
+                &larrhk;
+                &nbsp;
+                {{- parentmodule -}}
+            </a>
+        </p>
+    {% elif not root_module_name %}
+        <p>
+            <a class="pdoc-button module-list-button" href="{{ "../" * module.modulename.count(".") }}index.html">
+                &larrhk;
+                &nbsp;
+                Module Index
+            </a>
+        </p>
+    {% endif %}
+{% endblock %}
+
+{% block search_box %}
+    {# we set a pattern here so that we can use the :valid CSS selector #}
+    <input type="search" placeholder="Search API Documentation..." role="searchbox" aria-label="search"
+           pattern=".+" required>
+    <br>
+{% endblock %}
+
+{% block nav_members %}
+    {% if module.members %}
+        {# Workaround to avoid showing this section when only private members exist. #}
+        {% set nav_members_output = nav_members(module.members.values()) %}
+        {% if "<li>" in nav_members_output %}
+            <h2>API Documentation</h2>
+            {{ nav_members_output }}
+        {% endif %}
+    {% endif %}
+{% endblock %}
+
+{# Built with pdoc. ( Their logo is ugly though :( ). #}
+{% block attribution %}
+{% endblock %}

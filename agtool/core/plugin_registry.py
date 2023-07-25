@@ -105,56 +105,62 @@ class AGPluginRegistry(AbstractPluginRegistry):
 
         # Load the plugin module by parsing the AST of the file to determine
         # if it contains a class that extends AGPlugin
-        file_source = parse_ast(inspect.getsource(file_module))
         file_has_plugin = False
 
         loaded_plugins = 0
         """The number of plugins loaded from the file"""
 
-        for node in file_source.body:
-            # If the node is a class definition, check if one of its bases is
-            # AGPlugin or a subclass of AGPlugin.
-            if isinstance(node, AstClassDef):
-                is_plugin = False
+        try:
+            file_source = parse_ast(inspect.getsource(file_module))
 
-                bases = [base.id for base in cast(any, node.bases)]
-                plugin_type = None
+            for node in file_source.body:
+                # If the node is a class definition, check if one of its bases is
+                # AGPlugin or a subclass of AGPlugin.
+                if isinstance(node, AstClassDef):
+                    is_plugin = False
 
-                if "AGPlugin" in bases:
-                    plugin_type = AGPlugin
-                    is_plugin = True
-                else:
-                    # Search for a subclass of AGPlugin
-                    for base in bases:
-                        if self._is_plugin_superclass(base):
-                            plugin_type = self._plugin_interfaces[base]
-                            is_plugin = True
-                            break
+                    bases = [base.id for base in cast(any, node.bases)]
+                    plugin_type = None
 
-                if is_plugin:
-                    # Load the plugin module. If it has already been loaded,
-                    # we can skip it. If file_has_plugin is False, we can
-                    # assume that the plugin module has not been loaded yet.
-                    if not file_has_plugin:
-                        spec.loader.exec_module(file_module)
+                    if "AGPlugin" in bases:
+                        plugin_type = AGPlugin
+                        is_plugin = True
+                    else:
+                        # Search for a subclass of AGPlugin
+                        for base in bases:
+                            if self._is_plugin_superclass(base):
+                                plugin_type = self._plugin_interfaces[base]
+                                is_plugin = True
+                                break
 
-                        # Mark that the file contains a plugin (and has thus
-                        # been loaded)
-                        file_has_plugin = True
+                    if is_plugin:
+                        # Load the plugin module. If it has already been loaded,
+                        # we can skip it. If file_has_plugin is False, we can
+                        # assume that the plugin module has not been loaded yet.
+                        if not file_has_plugin:
+                            spec.loader.exec_module(file_module)
 
-                    # Register and instantiate the plugin.
-                    plugin_type_str = f' {plugin_type.__name__}' if plugin_type is not None else ""
-                    self.controller.logger.debug(
-                        f"[{os.path.basename(file)}] Found{plugin_type_str} plugin {node.name}. Instantiating..."
-                    )
+                            # Mark that the file contains a plugin (and has thus
+                            # been loaded)
+                            file_has_plugin = True
 
-                    # Instantiate the plugin
-                    plugin_class: Type[AGPlugin] = getattr(file_module, node.name)
-                    plugin: AGPlugin = plugin_class(controller=self.controller)
+                        # Register and instantiate the plugin.
+                        plugin_type_str = f' {plugin_type.__name__}' if plugin_type is not None else ""
+                        self.controller.logger.debug(
+                            f"[{os.path.basename(file)}] Found{plugin_type_str} plugin {node.name}. Instantiating..."
+                        )
 
-                    # Register the plugin
-                    self.register_plugin(plugin)
-                    loaded_plugins += 1
+                        # Instantiate the plugin
+                        plugin_class: Type[AGPlugin] = getattr(file_module, node.name)
+                        plugin: AGPlugin = plugin_class(controller=self.controller)
+
+                        # Register the plugin
+                        self.register_plugin(plugin)
+                        loaded_plugins += 1
+
+        except OSError:
+            # Do nothing if the source cannot be obtained.
+            pass
 
         if file_has_plugin:
             self.controller.logger.debug(

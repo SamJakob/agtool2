@@ -3,12 +3,97 @@
 {% block title %}agtool API Documentation{% endblock %}
 
 {% block nav %}
-    <h2>Search</h2>
+    <!-- Logo -->
+    {% if logo %}
+        {% if logo_link %}<a href="{{ logo_link }}">{% endif %}
+        <img src="{{ logo }}" class="logo" alt="project logo"/>
+        {% if logo_link %}</a>{% endif %}
+    {% endif %}
 
-    <input type="search" placeholder="Search..." role="searchbox" aria-label="search"
+    <!-- Search Box -->
+    <input type="search" placeholder="Search API Documentation..." role="searchbox" aria-label="search"
            pattern=".+" required>
 
-    {{ super() }}
+    <br>
+
+    <!-- Available Modules -->
+    <h2>Available Modules</h2>
+    <ul>
+        {% for submodule in all_modules if "._" not in submodule and not submodule.startswith("_") %}
+            {% set submodule_parts = submodule.split(".") %}
+            <li><a href="{{ submodule.replace(".","/") }}.html">
+                <b>{{ submodule_parts[0] }}</b>{{ ' - ' if submodule_parts | length > 1 else '' }}{{ '.'.join(submodule_parts[1:]) }}
+            </a></li>
+        {% endfor %}
+    </ul>
+{% endblock %}
+
+{% block content %}
+    <header class="pdoc ag">
+        {% block logo %}
+            {% if logo %}
+                <div class="logo-wrapper">
+                    {% if logo_link %}<a href="{{ logo_link }}">{% endif %}
+                    <img src="{{ logo }}" alt="agtool logo"/>
+                    {% if logo_link %}</a>{% endif %}
+                </div>
+            {% endif %}
+        {% endblock %}
+        {% if search %}
+            <input type="search" placeholder="Search API Documentation..." role="searchbox" aria-label="search box"
+                pattern=".+" required>
+        {% endif %}
+    </header>
+
+    {# Main body content (replaced by search results if there are any). #}
+    <main class="pdoc">
+        <h2>Welcome to the agtool Developer Documentation.</h2>
+        <p>
+            <code>agtool</code> is a tool for visualizing, computing and transforming account access graphs based on
+            an input specification.
+        </p>
+        <p>
+            This is automatically-generated <b>API documentation</b>, intended as a quick reference for people who are
+            writing code for, or using, agtool.
+            <b>
+                If you're looking for instructions for usage, please instead refer to the
+                <a href="https://nbtx-2.gitbook.io/agtool/">agtool User Manual</a>.
+            </b>
+        </p>
+        <p>
+            We would also recommend that developers read the User Manual for commentary on how
+            <code>agtool</code> is designed and structured.
+        </p>
+
+        <br>
+
+        <p>
+            <a href="https://nbtx-2.gitbook.io/agtool/" target="_blank" class="tile">
+                agtool User Manual <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M13.5 6H5.25C4.65326 6 4.08097 6.23705 3.65901 6.65901C3.23705 7.08097 3 7.65326 3 8.25V18.75C3 19.3467 3.23705 19.919 3.65901 20.341C4.08097 20.7629 4.65326 21 5.25 21H15.75C16.3467 21 16.919 20.7629 17.341 20.341C17.7629 19.919 18 19.3467 18 18.75V10.5M7.5 16.5L21 3M21 3H15.75M21 3V8.25" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path>
+                </svg>
+            </a>
+        </p>
+
+        <br>
+
+        <p>
+            This documentation spans two top-level modules; <a href="agtool.html"><b>agtool</b></a> (the core of the
+            application) and <a href="plugins.html"><b>plugins</b></a> (the plugins included by default).
+        </p>
+        <p>
+            The (<a href="agtool.html">agtool</a>) module might be useful if you are developing your own
+            plugins or working on the core of <code>agtool</code>.
+        </p>
+        <p>
+            The (<a href="plugins.html">plugins</a>) module might be useful if you are using other plugins
+            programmatically, are using a first-party plugin in your own plugin, or are trying to figure out a similar
+            API for your own plugin.
+        </p>
+    </main>
+
+    {# Search results. #}
+    {% include "search.html.jinja2" %}
 {% endblock %}
 
 {#{% block content %}#}

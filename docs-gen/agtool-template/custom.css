@@ -1,0 +1,55 @@
+header.pdoc.ag {
+    display: block;
+}
+
+header.pdoc.ag .logo-wrapper img {
+    max-height: unset;
+    max-width: unset;
+    height: 100px;
+}
+
+.logo-wrapper {
+    display: block;
+}
+
+a.tile {
+    display: inline-block;
+    border: 1px solid black;
+    color: black;
+    padding: 10px 30px;
+    font-weight: bold;
+}
+
+a.tile svg {
+    stroke: black !important;
+}
+
+a.tile:hover {
+    color: white;
+    background-color: black;
+}
+
+a.tile:hover svg {
+    stroke: white !important;
+}
+
+nav.pdoc {
+    box-shadow: none;
+    /*border-right: none;*/
+    background: white;
+}
+
+.pdoc-button {
+    border-radius: 0 !important;
+}
+
+a.pdoc-button.module-list-button {
+    border-color: black;
+    color: black;
+}
+
+a.pdoc-button.module-list-button:hover {
+    border-color: black;
+    background: black;
+    color: white;
+}

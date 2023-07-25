@@ -1,6 +1,6 @@
 <div style="text-align: center;">
   <a href="https://github.com/SamJakob/agtool2">
-    <img src="./docs-gen/logo.png" alt="agtool logo" width="484" />
+    <img src="./docs-gen/logo.svg" alt="agtool logo" width="484" />
   </a>
 </div>
 
