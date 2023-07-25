@@ -1,3 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:wght@400;500&display=block');
+@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@1,400;1,500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Condensed:wght@300;600&display=block');
+
+html, body, p, a {
+    font-family: 'Source Sans 3', sans-serif;
+}
+
+h1, h2, h3, h4 {
+    font-family: 'IBM Plex Sans Condensed', sans-serif;
+}
+
 header.pdoc.ag {
     display: block;
 }

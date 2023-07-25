@@ -1,7 +1,7 @@
 # Build documentation (and open browser)
 docs:
 	make docs\:silent
-	python -c "import os; import webbrowser; webbrowser.open('file://' + os.path.realpath('./docs/agtool/index.html'))"
+	python -c "import os; import webbrowser; webbrowser.open('file://' + os.path.realpath('./docs/index.html'))"
 
 # Build documentation without opening browser.
 docs\:silent:
