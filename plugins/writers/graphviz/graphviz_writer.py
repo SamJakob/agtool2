@@ -389,6 +389,13 @@ digraph {graph_name} {{
             # to have a comment in the middle of a list of attributes).
             comment = f" // https://graphviz.org/docs/attrs/{key}/" if statements else ""
 
+            # Skip all keys that start with '_ag_' (these are intended for internal
+            # preprocessing).
+            # It won't cause Graphviz any issues, but it's not necessary to include
+            # them in the output.
+            if key.startswith('_ag_'):
+                continue
+
             # Escape any double quotes in the value.
             if '"' in value:
                 value = value.replace('"', '\\"')

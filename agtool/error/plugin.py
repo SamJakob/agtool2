@@ -56,6 +56,25 @@ class AGMissingPluginError(AGPluginError):
                          description=full_description)
 
 
+class AGPluginLoadError(AGPluginError):
+    """
+    Thrown when a plugin cannot be loaded.
+    """
+
+    def __init__(self, description: str = None):
+        # The full description is the default description plus the optional
+        # extended description (if there is one).
+        full_description = ("A problem occurred whilst loading a plugin, "
+                            "and the plugin could not be loaded." +
+                            (f"\n\n{description}"
+                             if description is not None
+                             else ""))
+
+        super().__init__(plugin_id=None,
+                         message="A plugin could not be loaded.",
+                         description=full_description)
+
+
 class AGPluginExternalError(AGPluginError):
     """
     Thrown when a plugin encounters an error whilst interacting with an external resource,

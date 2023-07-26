@@ -1,3 +1,20 @@
+"""
+These are basic, modern, themes for the graphviz writer.
+The 'basic' theme supersedes the 'global' theme in the old agtool, and the 'minimal' theme supersedes
+the former 'minimal' theme.
+
+`AGGraphvizThemeBasic` colors the edges and vertices by type. Vertex types are as specified in the input.
+Edges are colored uniquely within each type out of the following matrix:
+
+|                            | Lone (Single method permits access) | Conjunction (multi-factor access)    |
+|----------------------------|-------------------------------------|--------------------------------------|
+| **Normal Access Method**   | Lone (not multi-factor), Normal     | Conjunction (multi-factor), Normal   |
+| **Recovery Access Method** | Lone (not multi-factor), Recovery   | Conjunction (multi-factor), Recovery |
+
+See the documentation on `AGGraphvizThemeBasic.compute_edge_attributes` for further details.
+
+"""
+
 from typing import Optional, Final
 
 from agtool.helpers.text import string_contains_any_of
@@ -43,13 +60,13 @@ class AGGraphvizThemeBasic(AGGraphvizWriterTheme):
                "'normal', 'recovery', 'multi-factor', 'multi-factor recovery'.\n" \
                "See the manual for more information on edge types."
 
-    def __init__(self, plugin: AGGraphvizWriter, graph: Graph):
+    def __init__(self, plugin: AGGraphvizWriter, graph: Graph, skip_color_computation: bool = False):
 
         super().__init__(plugin, graph)
 
         self._counters = {
-            'lone': {'normal': 0, 'recovery': 0},         # non-multi-factor (lone)
-            'conjunction': {'normal': 0, 'recovery': 0}   # multi-factor
+            'lone': {'normal': 0, 'recovery': 0},  # non-multi-factor (lone)
+            'conjunction': {'normal': 0, 'recovery': 0}  # multi-factor
         }
         """Stores the unique counter for each edge type."""
 
@@ -59,8 +76,18 @@ class AGGraphvizThemeBasic(AGGraphvizWriterTheme):
         groups have the same color for each edge.
         """
 
+        self._skip_color_computation = skip_color_computation
+        """
+        Whether to skip memoization of edge colors. This is useful for themes
+        that want to use a different identifier for memoization (e.g., the edge
+        label, or the per-vertex group ID instead of the unique group ID).
+        
+        See `compute_edge_attributes` for more information.
+        """
+
     def compute_node_attributes(self, vertex: Vertex, name: str) -> Optional[dict[str, str]]:
-        """Color the nodes based on the CHI2022 paper."""
+        """Colors nodes based on the coloring used in the CHI2022 paper."""
+
         attributes = {
             'colorscheme': 'pastel19',
             'style': 'filled',
@@ -104,8 +131,6 @@ class AGGraphvizThemeBasic(AGGraphvizWriterTheme):
                     'fontname': 'Source Sans 3 SemiBold',
                     'fontsize': '10',
                 }
-            case _:
-                pass
 
         # In addition to the above, if the vertex type includes pattern,
         # render it as a 3D box.
@@ -121,6 +146,23 @@ class AGGraphvizThemeBasic(AGGraphvizWriterTheme):
                                 to_node: Vertex,
                                 to_node_statistics: AGGraphvizVertexStatistics,
                                 ) -> Optional[dict[str, str]]:
+        """
+        Colors edges based on access method type (see documentation for
+        `plugins.writers.graphviz.themes.basic`).
+
+        - Recovery methods are dashed.
+        - Conjunctions are colored uniquely to indicate when multiple access methods (factors) are required to access a
+          resource and have a filled arrowhead.
+        - Single-access (lone) edges are colored black with an empty arrowhead.
+        - Edges may also be 'hidden' (i.e., not rendered). This is done by ensuring the label contains `"invis"`.
+
+        Edge colors are memoized based on their unique group ID. This ensures that each conjunction of access methods
+        have edges colored the same (unless `skip_color_computation` is set to `True` on the constructor).
+
+        This is to allow themes to memoize colors based on a different identifier (e.g., the edge label, or the
+        per-vertex group ID instead of the unique group ID) but to re-use all of the other node/edge attributes
+        computed by this theme.
+        """
 
         attributes = {'arrowhead': 'normal'}
 
@@ -136,10 +178,25 @@ class AGGraphvizThemeBasic(AGGraphvizWriterTheme):
         if edge.is_hidden:
             attributes = attributes | {'color': 'white'}
 
+        # Finally, augment the attributes with the edge color, provided we're not skipping color computation.
+        if not self._skip_color_computation:
+            attributes = self.compute_edge_color_by_id(attributes, edge, edge.unique_group_id)
+
+        return attributes
+
+    def compute_edge_color_by_id(self,
+                                 attributes: Optional[dict[str, str]],
+                                 edge: VertexEdge,
+                                 edge_id: int,
+                                 with_memoization: bool = True):
+        """Colors an edge by its unique ID. This is used to colorize conjunctions."""
+        if attributes is None:
+            attributes = {}
+
         # If a color has not yet been assigned, we'll assign one.
         if 'color' not in attributes:
-            if edge.unique_group_id in self._memoized_group_ids:
-                attributes = attributes | {'color': self._memoized_group_ids[edge.unique_group_id]}
+            if edge_id in self._memoized_group_ids and with_memoization:
+                attributes = attributes | {'color': self._memoized_group_ids[edge_id]}
             else:
                 # If the edge is a conjunction, we'll use the 'conjunction' counter.
                 counter_type_a = 'conjunction' if edge.is_conjunction else 'lone'
@@ -153,10 +210,56 @@ class AGGraphvizThemeBasic(AGGraphvizWriterTheme):
                 counter = (self._counters[counter_type_a][counter_type_b] % (len(BASIC_EDGE_COLOR_SCHEME) - 1)) + 1
                 self._counters[counter_type_a][counter_type_b] = counter
 
-                # Memoize the group ID.
-                self._memoized_group_ids[edge.unique_group_id] = BASIC_EDGE_COLOR_SCHEME[counter]
+                if with_memoization:
+                    # Memoize the group ID.
+                    self._memoized_group_ids[edge_id] = BASIC_EDGE_COLOR_SCHEME[counter]
 
                 # Assign the color to the edge, and increment the counter.
                 attributes = attributes | {'color': BASIC_EDGE_COLOR_SCHEME[counter]}
 
         return attributes
+
+
+class AGGraphvizThemeMinimal(AGGraphvizThemeBasic):
+
+    @classmethod
+    def name(cls):
+        return "minimal"
+
+    @classmethod
+    def description(cls):
+        return "Similar to the 'basic' theme but uses a minimal set of colors for edges."
+
+    def __init__(self, plugin: AGGraphvizWriter, graph: Graph):
+        # Disable the color computation on the superclass, to allow for a
+        # custom scheme.
+        super().__init__(plugin, graph, skip_color_computation=True)
+
+    def compute_edge_attributes(self,
+                                from_node: Vertex,
+                                from_node_statistics: AGGraphvizVertexStatistics,
+                                edge: VertexEdge,
+                                to_node: Vertex,
+                                to_node_statistics: AGGraphvizVertexStatistics,
+                                ) -> Optional[dict[str, str]]:
+
+        # Compute the attributes as normal.
+        attributes = super().compute_edge_attributes(from_node,
+                                                     from_node_statistics,
+                                                     edge,
+                                                     to_node,
+                                                     to_node_statistics)
+
+        # Additionally, check for 'comp' and 'gen' in the edge label (if there is one).
+        # comp => dashed line, gen => dotted line.
+        #
+        # It appears that these were only used by the 'swiss' style, but as it was possible
+        # for these to be used in other styles, we'll support them here.
+        if edge.label:
+            if 'comp' in edge.label:
+                attributes = attributes | {'style': 'dashed'}
+            elif 'gen' in edge.label:
+                attributes = attributes | {'style': 'dotted'}
+
+        # Then, augment the attributes with the alternative edge colors.
+        return self.compute_edge_color_by_id(attributes, edge, edge.group_id)

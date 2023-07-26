@@ -60,6 +60,10 @@ class Controller(AbstractController):
 
     @property
     def debug(self) -> bool:
+        # Ensure the application has booted.
+        if not self.has_booted:
+            self.boot()
+
         return AppSupportedLogLevels.index(self.config.verbosity) <= AppSupportedLogLevels.index("DEBUG")
 
     @property
@@ -80,15 +84,31 @@ class Controller(AbstractController):
 
     @property
     def config(self) -> AppConfig:
+        # Ensure the application has booted.
+        if not self.has_booted:
+            self.boot()
+
         return self._config
 
     @property
     def standalone(self) -> bool:
+        # Ensure the application has booted.
+        if not self.has_booted:
+            self.boot()
+
         return self._standalone
 
     @property
     def plugins(self) -> AbstractPluginRegistry:
+        # Ensure the application has booted.
+        if not self.has_booted:
+            self.boot()
+
         return self._plugins
+
+    @property
+    def has_booted(self) -> bool:
+        return self._ready_state > 0
 
     def __init__(self,
                  app_info: AppInfo,
@@ -143,13 +163,40 @@ class Controller(AbstractController):
                               " | <level>{message}</level>")
 
             self._logger = loguru.bind(name=self._name)
-            self._logger.info(f"Starting {self._name} {self._version}...")
 
-            # Load plugins.
-            self.plugins.load_all_plugins()
+        # We've not yet booted. Wait for the boot() method to be called.
+        # Ready state is 0 (not ready).
+        # Ready state is 1 (booting).
+        # Ready state is 2 (booted).
+        self._ready_state = 0
+
+    def boot(self):
+        # If we're already booting or booted up, don't do anything.
+        if self.has_booted:
+            return
+
+        # Mark ready state as 1 (booting).
+        self._ready_state = 1
+
+        self._logger.info(f"Starting {self._name} {self._version}...")
+
+        # Load plugins.
+        self.plugins.load_all_plugins()
+
+        # Mark ready state as 2 (booted).
+        self._ready_state = 2
 
     def shutdown(self, ordinary: bool = False, exit_code: int = 0):
-        self._logger.info("Shutting down...")
+        # Do nothing if the application hasn't booted.
+        if not self.has_booted:
+            return
+
+        if ordinary:
+            if exit_code == 0:
+                self._logger.info("Shutting down...")
+            else:
+                self._logger.error(f"Shutting down due to error ({exit_code})...")
+
         exit(exit_code)
 
     def reader_for(self, format_name: str):
@@ -166,6 +213,10 @@ class Controller(AbstractController):
         file name, or an `AGMissingPluginError` if no such reader could be
         found.
         """
+
+        # Ensure the application has booted.
+        if not self.has_booted:
+            self.boot()
 
         # Fetch the reader plugins from the plugin registry.
         readers = self.plugins.get_plugins_of_type(AGReader)
@@ -193,6 +244,10 @@ class Controller(AbstractController):
         file name, or an `AGMissingPluginError` if no such writer could be
         found.
         """
+
+        # Ensure the application has booted.
+        if not self.has_booted:
+            self.boot()
 
         # Fetch the writer plugins from the plugin registry.
         writers = self.plugins.get_plugins_of_type(AGWriter)

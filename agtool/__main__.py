@@ -40,6 +40,9 @@ def main(argv=None):
             base_path=os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
         )
 
+        # Explicitly boot the controller.
+        controller.boot()
+
         # Execute the relevant commands.
 
         # First, check if an override_action is set and handle it.

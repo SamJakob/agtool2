@@ -5,7 +5,10 @@ import json
 import os
 import pkgutil
 import sys
-from ast import ClassDef as AstClassDef, parse as parse_ast
+import traceback
+from ast import ClassDef as AstClassDef, ImportFrom as AstImportFrom, parse as parse_ast
+from modulefinder import ModuleFinder
+from pathlib import Path
 from typing import Dict, List, Type, cast
 
 from tabulate import tabulate
@@ -13,7 +16,7 @@ from tabulate import tabulate
 import agtool.interfaces
 from agtool.abstract import AbstractPluginGeneric, AbstractPluginRegistry, AbstractPluginExtensionGeneric
 from agtool.core import Controller
-from agtool.error import AGPluginConflictError, AGPluginError
+from agtool.error import AGPluginConflictError, AGPluginError, AGError, AGPluginLoadError, AGPluginExternalError
 from agtool.interfaces.plugin import AGPlugin
 
 
@@ -121,17 +124,34 @@ class AGPluginRegistry(AbstractPluginRegistry):
         self.controller.logger.trace(f"Looking for extensions for \"{plugin.name}\" in {file}...")
 
         # Attempt to derive a spec and module from the file
-        spec = importlib.util.spec_from_file_location(os.path.basename(file), file)
+        spec = importlib.util.spec_from_file_location(file, file)
         file_module = importlib.util.module_from_spec(spec)
 
         # Find the list of valid superclasses for the extension.
         valid_superclasses = {subclass_of.__name__}
-        valid_superclasses.union({clazz.__name__ for clazz in subclass_of.__subclasses__()})
+        valid_superclasses = valid_superclasses.union({clazz.__name__ for clazz in subclass_of.__subclasses__()})
 
         try:
             file_source = parse_ast(inspect.getsource(file_module))
             file_imported = False
             """Whether the file has been imported into the runtime yet."""
+
+            for node in file_source.body:
+                if isinstance(node, AstImportFrom):
+                    # We only care about imports from the current plugin directory.
+                    if not node.module.startswith(os.path.basename(self.plugins_dir)):
+                        continue
+
+                    # Get the path to the module that is being imported.
+                    module_path = str(Path(os.path.dirname(self.plugins_dir)).joinpath(
+                        Path(node.module.replace(".", "/")).with_suffix(".py")
+                    ))
+
+                    # Run load_extension_from_file on that module first to ensure that all
+                    # superclasses in that module are loaded.
+                    valid_superclasses = valid_superclasses.union({
+                        clazz.__name__ for clazz in self.load_extension_from_file(plugin, module_path, subclass_of)
+                    })
 
             for node in file_source.body:
                 # If the node is a class definition, check if one of its bases is
@@ -157,10 +177,17 @@ class AGPluginRegistry(AbstractPluginRegistry):
                         # (Classes that are subclasses of this one, are also
                         # by extension, subclasses of the requested class, subclass_of).
                         valid_superclasses.add(node.name)
-
         except OSError:
             # Do nothing if the source cannot be obtained.
             pass
+        except Exception as e:
+            stacktrace = ''.join(traceback.format_exception(e))
+
+            raise AGPluginExternalError(
+                plugin_id=plugin.id,
+                description=f"There was a problem while loading a {subclass_of.__name__}:\n\n{stacktrace}",
+                cause=e
+            )
 
         return extensions
 
@@ -196,7 +223,10 @@ class AGPluginRegistry(AbstractPluginRegistry):
         """The number of plugins loaded from the file"""
 
         try:
-            file_source = parse_ast(inspect.getsource(file_module))
+            try:
+                file_source = parse_ast(inspect.getsource(file_module))
+            except Exception as e:
+                raise AGPluginLoadError(f"Failed to parse source for {os.path.basename(file)}: {e}")
 
             for node in file_source.body:
                 # If the node is a class definition, check if one of its bases is
@@ -236,25 +266,34 @@ class AGPluginRegistry(AbstractPluginRegistry):
                         )
 
                         # Instantiate the plugin
-                        plugin_class: Type[AGPlugin] = getattr(file_module, node.name)
-                        plugin: AGPlugin = plugin_class(controller=self.controller)
+                        try:
+                            plugin_class: Type[AGPlugin] = getattr(file_module, node.name)
+                            plugin: AGPlugin = plugin_class(controller=self.controller)
 
-                        # Register the plugin
-                        self.register_plugin(plugin)
-                        loaded_plugins += 1
+                            # Register the plugin
+                            self.register_plugin(plugin)
+                            loaded_plugins += 1
+                        except AGError as e:
+                            raise e
+                        except Exception as e:
+                            raise AGPluginLoadError(
+                                f"Failed to initialize class {node.name} as an{plugin_type_str} plugin: {e}"
+                            )
 
+        except AGPluginLoadError as e:
+            self.controller.logger.error(e)
         except OSError:
             # Do nothing if the source cannot be obtained.
             pass
 
-        if file_has_plugin:
+        if file_has_plugin and loaded_plugins > 0:
             self.controller.logger.success(
                 f"Successfully registered {loaded_plugins} plugin{'s' if loaded_plugins != 1 else ''} from "
                 f"{os.path.basename(file)}"
             )
         else:
             self.controller.logger.trace(
-                f"File {os.path.basename(file)} does not contain a class that extends AGPlugin, skipping..."
+                f"File {os.path.basename(file)} does not contain a valid class that extends AGPlugin, skipping..."
             )
 
         return file_has_plugin

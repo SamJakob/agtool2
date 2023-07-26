@@ -69,6 +69,30 @@ class AbstractController(ABC):
         Whether the application is running in debug mode.
         """
 
+    @property
+    @abstractmethod
+    def has_booted(self) -> bool:
+        """
+        Whether the application has booted.
+
+        This will also return true if the application is booting. It is intended to
+        denote whether `boot` needs to be called. If `boot` is called when the
+        application has already booted (per this property), it will be a no-op.
+        """
+
+    @abstractmethod
+    def boot(self):
+        """
+        Boot the application (loads plugins, etc.,).
+
+        This is done in a separate method so that the controller can be initialized
+        first to initialize a logger, get configuration, etc., before booting the
+        remaining application components.
+
+        If boot is not called early enough, the controller may decide to invoke this
+        method automatically.
+        """
+
     @abstractmethod
     def shutdown(self, ordinary: bool = False, exit_code: int = 0):
         """
@@ -86,6 +110,8 @@ class AbstractController(ABC):
         Usage of this method is preferred over `sys.exit()` as it allows the
         application to perform cleanup and logging before exiting (e.g., if a web
         server is running, it can be shut down gracefully).
+
+        If the application hasn't yet booted, this will be a no-op.
 
         :param ordinary: Whether the application is shutting down ordinarily.
         This should be false outside of the application's main loop regardless of

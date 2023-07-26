@@ -1,5 +1,4 @@
 import subprocess
-from typing import Optional
 
 from agtool.core import Controller
 from agtool.error import AGPluginExternalError
