@@ -16,7 +16,7 @@ class AGWriter(AGPlugin):
         """The default file extension that this writer writes to."""
 
     @abstractmethod
-    def write_graph(self, graph: Graph, destination_label: str, options: Optional[dict[str, str]] = None) -> Union[str, bytes]:
+    def write_graph(self, graph: Graph, destination_label: str) -> Union[str, bytes]:
         """
         Called to write a graph to the format that this writer implements a
         writer for.
@@ -25,8 +25,6 @@ class AGWriter(AGPlugin):
         :param destination_label: The name of the output destination
         (e.g., a file name, or a URL). This is a textual label, generally
         intended for error messages.
-        :param options: An optional set of parameters to pass to the writer
-        (e.g., for specifying theming options).
         :return: The output data (either as a string, in the case of plain text
         formats, or as bytes, in the case of binary formats).
         """

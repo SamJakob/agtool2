@@ -82,10 +82,37 @@ class VertexEdge:
     the owning vertex) and its dependency.
     """
 
+    @property
+    def is_recovery(self) -> bool:
+        """
+        Returns true if this edge is a recovery method, or false if it is a
+        normal method.
+        """
+        if self.label is None:
+            return False
+
+        return 'rec' in self.label
+
+    @property
+    def is_in_group(self) -> bool:
+        """
+        Returns true if this edge is in a group, or false if it is not in a
+        group.
+        """
+        return self._group_id is not None
+
+    @property
+    def group_id(self) -> Optional[int]:
+        """
+        Returns the group ID of this edge, or None if it is not in a group.
+        """
+        return self._group_id
+
     def __init__(self,
                  dependency: _VertexReferenceType,
                  label: str = None,
-                 color: str = None):
+                 color: str = None,
+                 group_id: Optional[int] = None):
         """
         Initializes a (directed) vertex edge for an owner node, that holds a
         dependency node. This also allows metadata to be set on this edge, such
@@ -99,6 +126,8 @@ class VertexEdge:
 
         self.label = label
         self.color = color
+
+        self._group_id = group_id
 
     def __str__(self):
         dependency_name = self.dependency if isinstance(self.dependency, str) else self.dependency.name

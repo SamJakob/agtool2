@@ -148,6 +148,10 @@ class Controller(AbstractController):
             # Load plugins.
             self.plugins.load_all_plugins()
 
+    def shutdown(self, ordinary: bool = False, exit_code: int = 0):
+        self._logger.info("Shutting down...")
+        exit(exit_code)
+
     def reader_for(self, format_name: str):
         """
         Get a reader for the specified file extension or format name.

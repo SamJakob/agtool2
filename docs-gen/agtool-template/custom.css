@@ -65,3 +65,11 @@ a.pdoc-button.module-list-button:hover {
     background: black;
     color: white;
 }
+
+.text-light {
+    color: #999;
+}
+
+.text-light a {
+    color: #6a6a6a;
+}

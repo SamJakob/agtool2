@@ -92,6 +92,19 @@ class AGTxtReader(AGReader):
     # with a description that will be added to all of the vertices on the RHS
     # of the arrow (i.e., vertexList2).
     #
+    # When a vertex list is specified on the LHS of an arrow, it is considered
+    # to be a dependency for all of the vertices on the RHS of the arrow.
+    # That is, ALL of the vertices on the LHS are required to access ANY of the
+    # vertices on the RHS. (It should be sufficient to handle these semantics by
+    # generating a group ID for the LHS vertices and storing this in the
+    # edges to the RHS vertices).
+    #
+    # Note, as a point of clarification, when the LHS is a list and the RHS is
+    # a list, the LHS is considered to be a dependency for each of the RHS
+    # vertices. So for each RHS vertex, there will be an edge from each LHS
+    # vertex to it and all of these edges from the LHS to a given RHS vertex
+    # will be grouped together.
+    #
     # For example:
     #
     # password -> Gmail
@@ -244,6 +257,16 @@ class AGTxtReader(AGReader):
         error if it is subsequently referenced.
         """
 
+        group_counter: dict[str, int] = {}
+        """
+        Stores the current group counter for each vertex. This is used to
+        generate a unique group ID for each set of vertices on the LHS of an
+        arrow (where the ID is unique per RHS vertex).
+        
+        The key of this dictionary is the name of the RHS vertex, and the value
+        is the current group ID for that vertex.
+        """
+
         def assign_vertex_attribute(assign_to: str, key: str, value: any):
             # This function assumes that the assign_to vertex has already been
             # defined as a vertex in attributes!
@@ -294,6 +317,13 @@ class AGTxtReader(AGReader):
                         if vertex_name not in vertex_edges:
                             vertex_edges[vertex_name] = []
 
+                        # If we have a conjunction on the LHS, we need to generate
+                        # a group ID for the RHS vertices. So make sure the group
+                        # counter is initialized for each RHS vertex.
+                        if len(expression.vertexList1) > 0:
+                            if vertex_name not in group_counter:
+                                group_counter[vertex_name] = 0
+
                     # All vertices on the LHS are dependencies for the RHS, so
                     # loop over each one, creating an edge with each RHS -
                     # where the RHS is the 'owner' of the incident edges with
@@ -331,7 +361,18 @@ class AGTxtReader(AGReader):
                                 arrow.label = macros[arrow.type]
 
                             # Add the vertex edges to the dictionary.
-                            vertex_edges[dependent_vertex_name].append(VertexEdge(vertex_name, label=arrow.label))
+                            vertex_edges[dependent_vertex_name].append(VertexEdge(
+                                vertex_name,
+                                label=arrow.label,
+                                group_id=group_counter[dependent_vertex_name]
+                            ))
+
+                    # Having processed the edges, we can now increment the
+                    # group counter for each RHS vertex if there was a conjunction
+                    # on the LHS.
+                    if len(expression.vertexList1) > 0:
+                        for vertex_name in expression.vertexList2:
+                            group_counter[vertex_name] += 1
 
                 case "set_attributes":
                     # Set attributes for each vertex. Presently, this is just

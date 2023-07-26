@@ -25,7 +25,8 @@ class AppConfig:
                  verbosity: AppLogLevel = "INFO",
                  plugins_dir: str = "plugins/",
                  input_format: Optional[str] = None,
-                 output_format: Optional[str] = None):
+                 output_format: Optional[str] = None,
+                 settings: Optional[dict[str, str]] = None):
         self.override_action = override_action
         """
         If specified, this will override the action that would otherwise be
@@ -68,3 +69,17 @@ class AppConfig:
 
         self.output_file: Optional[str] = output_file
         """The path to the output file that should be written."""
+
+        self.settings: dict[str, str] = settings or {}
+        """
+        A dictionary of settings that may be read by the application or its plugins.
+        
+        Settings are global, so they are not associated with any particular
+        plugin or the application itself. As such, if you would like to implement a
+        plugin-specific setting, you should prefix the setting name with the
+        plugin's name (e.g., "my_plugin.my_setting") - or some scheme that otherwise
+        uniquely identifies the plugin.
+        
+        You may alternatively use your plugin name as the key and take some arbitrary
+        value (e.g., a JSON string) if you would prefer greater flexibility. 
+        """

@@ -125,8 +125,8 @@ class AGPluginRegistry(AbstractPluginRegistry):
         file_module = importlib.util.module_from_spec(spec)
 
         # Find the list of valid superclasses for the extension.
-        valid_superclasses = [subclass_of.__name__]
-        valid_superclasses.extend([clazz.__name__ for clazz in subclass_of.__subclasses__()])
+        valid_superclasses = {subclass_of.__name__}
+        valid_superclasses.union({clazz.__name__ for clazz in subclass_of.__subclasses__()})
 
         try:
             file_source = parse_ast(inspect.getsource(file_module))
@@ -140,7 +140,7 @@ class AGPluginRegistry(AbstractPluginRegistry):
                     # Get the list of base classes.
                     bases = [base.id for base in cast(any, node.bases)]
 
-                    if subclass_of.__name__ in bases:
+                    if len(valid_superclasses.intersection(bases)) > 0:
                         # Load the plugin module. If it has already been loaded,
                         # we can skip it. If file_imported is False, we can
                         # assume that the plugin module has not been loaded yet.
@@ -152,6 +152,11 @@ class AGPluginRegistry(AbstractPluginRegistry):
 
                         # Then, add the extension to the list of extensions.
                         extensions.append(getattr(file_module, node.name))
+
+                        # and add the extension to the list of valid_superclasses.
+                        # (Classes that are subclasses of this one, are also
+                        # by extension, subclasses of the requested class, subclass_of).
+                        valid_superclasses.add(node.name)
 
         except OSError:
             # Do nothing if the source cannot be obtained.
@@ -227,7 +232,7 @@ class AGPluginRegistry(AbstractPluginRegistry):
                         # Register and instantiate the plugin.
                         plugin_type_str = f' {plugin_type.__name__}' if plugin_type is not None else ""
                         self.controller.logger.info(
-                            f"Attempting to initialize class {node.name} as a(n){plugin_type_str} plugin..."
+                            f"Attempting to initialize class {node.name} as an{plugin_type_str} plugin..."
                         )
 
                         # Instantiate the plugin

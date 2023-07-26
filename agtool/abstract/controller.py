@@ -47,6 +47,11 @@ class AbstractController(ABC):
         """The application's current configuration"""
 
     @property
+    def settings(self) -> dict[str, str]:
+        """A convenience property to access the application's settings"""
+        return self.config.settings
+
+    @property
     @abstractmethod
     def standalone(self) -> bool:
         """Whether the application should run in standalone mode (e.g.,
@@ -62,4 +67,28 @@ class AbstractController(ABC):
     def debug(self) -> bool:
         """
         Whether the application is running in debug mode.
+        """
+
+    @abstractmethod
+    def shutdown(self, ordinary: bool = False, exit_code: int = 0):
+        """
+        Terminates the application. This should be called when the application is
+        finished running, or when the application is to be terminated early.
+
+        This MAY be used by the application core to shut down the application
+        cleanly on a normal exit from the main loop, but ths is not necessarily the
+        case.
+
+        Plugins, etc., SHOULD use this method to terminate the application
+        cleanly. They may signal a non-zero `exit_code` to indicate a failure or
+        error. Plugins SHOULD ALWAYS leave `ordinary` as `False`.
+
+        Usage of this method is preferred over `sys.exit()` as it allows the
+        application to perform cleanup and logging before exiting (e.g., if a web
+        server is running, it can be shut down gracefully).
+
+        :param ordinary: Whether the application is shutting down ordinarily.
+        This should be false outside of the application's main loop regardless of
+        whether an error has occurred and may be ignored by the controller.
+        :param exit_code: The exit code to exit with.
         """

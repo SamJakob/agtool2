@@ -3,7 +3,7 @@ from typing import List, NamedTuple, Sequence, Optional
 
 import agtool
 from agtool.config import AppConfig, AppSupportedLogLevels
-from agtool.helpers.file import replace_file_extension
+from agtool.error import AGError
 
 
 class AppInfoVersion(NamedTuple):
@@ -48,7 +48,7 @@ def get_readable_app_info(with_long_description=False) -> str:
 Last Updated: {version.date}""" + long_description
 
 
-def parse_cli_args(args: Sequence[str]) -> AppConfig:
+def parse_cli_args(args: Sequence[str], default_settings: Optional[dict[str, str]] = None) -> AppConfig:
     """
     Parses the list of command-line arguments to determine the application
     configuration.
@@ -96,22 +96,30 @@ def parse_cli_args(args: Sequence[str]) -> AppConfig:
                         action="store", dest="plugins_dir",
                         help="sets the directory in which to search for plugins; [default: %(default)s]")
 
-    parser.add_argument("-if", '--input-format',
+    # -it and -ot are aliases for --input-type and --output-type, respectively.
+    # -if and -of have been avoided to prevent confusion with input and output
+    # file arguments.
+    parser.add_argument("-it", '--input-type', '--input-format',
                         action="store", dest="input_format",
                         help="sets the expected input format (guessed heuristically by default)")
 
-    parser.add_argument("-of", '--output-format',
+    parser.add_argument("-ot", '--output-type', '--output-format',
                         action="store", dest="output_format", default='png',
                         help="sets the desired output format (guessed heuristically by default)")
 
     parser.add_argument('input', help="sets the input file to read from",
                         action="store")
 
-    parser.add_argument('--output', '--output-file',
+    parser.add_argument('-o', '--output', '--output-file',
                         action="store", default=None,
                         help="sets the output file to write to; [default: <input_file>.png]")
 
+    parser.add_argument('-s', '--set', '--set-option',
+                        action="append", dest="options", default=[],
+                        help="sets a global option which may be read by agtool or its plugins (e.g., -s key=value)")
+
     result = parser.parse_args(args)
+
     return AppConfig(
         override_action=result.override_action,
         verbosity=result.level,
@@ -120,4 +128,48 @@ def parse_cli_args(args: Sequence[str]) -> AppConfig:
         output_format=result.output_format,
         input_file=result.input,
         output_file=result.output,
+        settings=parse_settings(result.options, defaults=default_settings)
     )
+
+
+def parse_settings(value: list[str], defaults: Optional[dict[str, str]] = None) -> dict[str, str]:
+    """
+    Parses a list of settings (e.g., from the command-line) into a dictionary
+    of key-value pairs.
+
+    The settings should be specified as a list of strings in the format
+    "key=value". The value may be omitted, in which case the value will be
+    set to an empty string.
+
+    If multiple equals signs are present, the first equals sign will be used
+    to delimit the key from the value. All subsequent equals signs will be
+    treated as part of the value.
+
+    Optionally, a dictionary of defaults may be specified. The parsed settings
+    will be merged into the defaults, with the parsed settings taking
+    precedence.
+
+    :param value: The list of settings to parse.
+    :param defaults: Optionally, a dictionary of default settings to use if
+    a given setting key is not specified.
+    :return: A dictionary of key-value pairs.
+    """
+
+    settings = {}
+    for setting in value:
+        # Split the setting into key and value.
+        key, *value = setting.split('=')
+        value = '='.join(value)
+
+        key = key.strip()
+        if not key:
+            raise AGError("Invalid setting: key is empty")
+
+        # Set the value to an empty string if it is not specified.
+        if not value:
+            value = ""
+
+        # Add the key-value pair to the settings dictionary.
+        settings[key] = value
+
+    return (defaults or {}) | settings
