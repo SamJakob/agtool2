@@ -94,40 +94,88 @@ class VertexEdge:
         return 'rec' in self.label
 
     @property
-    def is_in_group(self) -> bool:
+    def is_conjunction(self) -> bool:
         """
-        Returns true if this edge is in a group, or false if it is not in a
-        group.
+        Returns true if this edge forms a conjunction with other edges, or
+        false if not.
         """
-        return self._group_id is not None
+        return self._is_conjunction
+
+    @property
+    def is_hidden(self) -> bool:
+        """
+        Whether the edge should be hidden in the graph. Returns true if it should
+        be, or false if it should not be hidden.
+        """
+        if self.label is None:
+            return False
+
+        return 'invis' in self.label
 
     @property
     def group_id(self) -> Optional[int]:
         """
         Returns the group ID of this edge, or None if it is not in a group.
+        This group ID is unique to the sink (target) vertex.
+
+        See also `unique_group_id`.
         """
         return self._group_id
+
+    @property
+    def unique_group_id(self) -> Optional[int]:
+        """
+        Returns the group ID of this edge, or None if it is not in a group.
+        The unique group ID is unique to the entire graph, rather than just the
+        sink (target) vertex.
+
+        See also `group_id`.
+        """
+        return self._unique_group_id
 
     def __init__(self,
                  dependency: _VertexReferenceType,
                  label: str = None,
-                 color: str = None,
-                 group_id: Optional[int] = None):
+                 group_id: Optional[int] = None,
+                 unique_group_id: Optional[int] = None,
+                 is_conjunction: bool = False):
         """
         Initializes a (directed) vertex edge for an owner node, that holds a
         dependency node. This also allows metadata to be set on this edge, such
         as color or label.
 
+        It is expected that `group_id` and `unique_group_id` will be precomputed
+        at the reading stage, and that the edges will be instantiated with these
+        values already set. Even if the edges are not grouped, they should still
+        be given a group ID in sequence as if they were grouped, as it can be used
+        to signify the overall access methods that are used to access a given
+        vertex.
+
+        `is_conjunction` should instead be set to true if the edge is a
+        conjunction. **It is an error for `is_conjunction` to be `False` and
+        `unique_group_id` to have a duplicate value between any vertices.**
+
         :param dependency: A dependency node that points into the owner node.
+        :param label: An optional label to be applied to the edge. (This may be
+            displayed textually or graphically depending on the theme).
+        :param group_id: An optional group ID to be applied to the edge. This
+            is used to group conjunctions together.
+            For theming reasons, these should ideally be normalized to be consecutive
+            integers starting from 0 before the edges are instantiated.
+        :param unique_group_id: An optional unique group ID to be applied to the
+            edge. This is used to group conjunctions together. This is unique
+            across the entire graph, rather than just the sink (target) vertex.
         """
 
         self.dependency: _VertexReferenceType = dependency
         """A dependency node that points into the owner node via this edge."""
 
         self.label = label
-        self.color = color
+        """The label for this edge."""
 
         self._group_id = group_id
+        self._unique_group_id = unique_group_id
+        self._is_conjunction = is_conjunction
 
     def __str__(self):
         dependency_name = self.dependency if isinstance(self.dependency, str) else self.dependency.name

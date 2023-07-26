@@ -1,5 +1,6 @@
 import os.path
 from abc import abstractmethod, ABC
+from collections import deque
 from typing import Optional, Type, TypeVar, Final
 
 from agtool.core import Controller
@@ -88,8 +89,6 @@ class AGGraphvizWriter(AGWriter):
         # Use the circuit resistance model to resolve the distance
         # matrix for the graph.
         'model': 'circuit',
-
-        'fontname': 'Times-Roman',
     }
 
     DEFAULT_NODE_ATTRIBUTES: Final = {
@@ -138,7 +137,7 @@ class AGGraphvizWriter(AGWriter):
         """
 
         # Check if the user wants to list the available themes.
-        should_list_themes = (self.controller.settings['theme'].strip().lower() in ['-l', '--list', '?']) \
+        should_list_themes = (self.controller.settings['theme'].strip().lower() in ['-l', '--list', '?', '--help']) \
             if 'theme' in self.controller.settings else False
 
         requested_theme_name: str = self.controller.settings['theme'].lower().strip() \
@@ -187,14 +186,43 @@ class AGGraphvizWriter(AGWriter):
             else:
                 longest_theme_name = max([len(theme_class.name()) for theme_class in self.themes])
 
+                self.controller.logger.info("")
                 for theme_class in self.themes:
-                    self.controller.logger.info(f"    {theme_class.name().ljust(longest_theme_name + 4, ' ')} "
-                                                f"- {theme_class.description()}")
+                    theme_entry = f"    {theme_class.name().ljust(longest_theme_name + 4, ' ')}"
+                    theme_blank = " " * len(theme_entry)
+                    theme_features_dict = theme_class.supported_features() or {}
 
-            self.controller.logger.info("")
+                    theme_features = ", ".join([
+                        f"theme.{feature_name}={{{','.join(feature_values)}}}"
+                        for feature_name, feature_values in theme_features_dict.items()
+                    ]) if theme_features_dict else "None"
+
+                    theme_description_lines = deque(theme_class.description().split('\n'))
+                    self.controller.logger.info(f"{theme_entry} - {theme_description_lines.popleft()}")
+
+                    for line in theme_description_lines:
+                        self.controller.logger.info(f"{theme_blank} - {line}")
+
+                    self.controller.logger.info(f"{' ' * len(theme_entry)}   Supported settings: {theme_features}")
+                    self.controller.logger.info("")
 
             # We don't need to do anything else.
             self.controller.shutdown()
+
+        self.controller.logger.debug("Parsing theme settings...")
+
+        # Validate any specified theme settings.
+        if theme:
+            theme_features_dict = theme.supported_features() or {}
+            for feature, value in theme_features_dict.items():
+                if f"theme.{feature}" in self.controller.settings:
+                    if self.controller.settings[f"theme.{feature}"] not in value:
+                        raise AGPluginExternalError(
+                            plugin_id=self.id,
+                            description=f"Invalid value for theme feature \"{feature}\". "
+                                        f"Valid values are: {', '.join(value)}. Value specified: "
+                                        f"\"{self.controller.settings[f'theme.{feature}']}\"."
+                        )
 
         self.controller.logger.info("Creating GraphViz DOT file for graph...")
 
@@ -361,6 +389,10 @@ digraph {graph_name} {{
             # to have a comment in the middle of a list of attributes).
             comment = f" // https://graphviz.org/docs/attrs/{key}/" if statements else ""
 
+            # Escape any double quotes in the value.
+            if '"' in value:
+                value = value.replace('"', '\\"')
+
             # Add the attribute to the output.
             output.append(f"{key}=\"{value}\"{';' if statements else ''}{comment}")
 
@@ -414,6 +446,27 @@ class AGGraphvizWriterTheme(ABC):
         """
         return "No description provided."
 
+    @classmethod
+    def supported_features(cls) -> Optional[dict[str, set[str]]]:
+        """
+        An optional set of feature flags that this theme supports.
+        These will be shown automatically in the help text for the theme.
+
+        Additionally, if a feature flag is selected and its value is not set to
+        one of the items in the set for that flag, an error will be raised.
+
+        The feature flags are specified as a dictionary, where the key is the
+        name of the feature flag, and the value is a set of valid values for
+        that feature flag.
+
+        **Note**: do not put `theme.` as a prefix on the feature flag names.
+        This will be added automatically. So if you want to specify a feature
+        flag called `my_feature`, you should specify it as `my_feature` in this
+        dictionary, and it will be specified as `theme.my_feature` on the
+        command line.
+        """
+        return None
+
     @property
     def retain_defaults(self) -> bool:
         """
@@ -430,6 +483,14 @@ class AGGraphvizWriterTheme(ABC):
         :return: Whether to retain the default attributes for the graph and nodes.
         """
         return True
+
+    def get_setting(self, name: str) -> Optional[str]:
+        """Fetches the requested setting from the controller. Returns none if the setting is not set."""
+
+        if f'theme.{name}' in self.plugin.controller.settings:
+            return self.plugin.controller.settings[f'theme.{name}']
+
+        return None
 
     def __init__(self, plugin: AGGraphvizWriter, graph: Graph):
         self.plugin = plugin

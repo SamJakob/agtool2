@@ -267,6 +267,13 @@ class AGTxtReader(AGReader):
         is the current group ID for that vertex.
         """
 
+        unique_group_counter: int = 0
+        """
+        Stores the current unique group counter. This is used to generate a
+        unique group ID for each conjunction of vertices similarly to group_counter
+        but for the entire graph, rather than being unique to the RHS vertex.
+        """
+
         def assign_vertex_attribute(assign_to: str, key: str, value: any):
             # This function assumes that the assign_to vertex has already been
             # defined as a vertex in attributes!
@@ -296,6 +303,8 @@ class AGTxtReader(AGReader):
                         vertex_types[vertex_name] = expression.type
 
                 case "set_edges":
+                    is_conjunction = len(expression.vertexList1) > 1
+
                     # Check the RHS vertices and set the 'description' property
                     # on them, if it was specified.
                     for vertex_name in expression.vertexList2:
@@ -320,9 +329,8 @@ class AGTxtReader(AGReader):
                         # If we have a conjunction on the LHS, we need to generate
                         # a group ID for the RHS vertices. So make sure the group
                         # counter is initialized for each RHS vertex.
-                        if len(expression.vertexList1) > 0:
-                            if vertex_name not in group_counter:
-                                group_counter[vertex_name] = 0
+                        if vertex_name not in group_counter:
+                            group_counter[vertex_name] = 0
 
                     # All vertices on the LHS are dependencies for the RHS, so
                     # loop over each one, creating an edge with each RHS -
@@ -347,11 +355,16 @@ class AGTxtReader(AGReader):
 
                             # If the link type is = (i.e., the first character
                             # of the arrow is =, overwrite the arrow's label
-                            # with rec). This could be modified to prepend
-                            # 'rec' to the label for backwards compatibility,
-                            # but this doesn't seem particularly useful.
+                            # with rec).
+                            # If the link type is = but a label is specified,
+                            # overwrite the arrow's label with rec and append
+                            # the label to the end of the label (with a comma
+                            # delimiter).
                             if arrow.type == '=':
-                                arrow.label = 'rec'
+                                if arrow.label is None:
+                                    arrow.label = 'rec'
+                                else:
+                                    arrow.label = f'rec,{(arrow.label or "").replace("=", "")}'
 
                             # Similarly to the above, if an arrow type is
                             # located in macros, just set the label to it, but
@@ -364,15 +377,18 @@ class AGTxtReader(AGReader):
                             vertex_edges[dependent_vertex_name].append(VertexEdge(
                                 vertex_name,
                                 label=arrow.label,
-                                group_id=group_counter[dependent_vertex_name]
+                                group_id=group_counter[dependent_vertex_name],
+                                unique_group_id=unique_group_counter,
+                                is_conjunction=is_conjunction
                             ))
 
                     # Having processed the edges, we can now increment the
                     # group counter for each RHS vertex if there was a conjunction
                     # on the LHS.
-                    if len(expression.vertexList1) > 0:
-                        for vertex_name in expression.vertexList2:
-                            group_counter[vertex_name] += 1
+                    unique_group_counter += 1
+
+                    for vertex_name in expression.vertexList2:
+                        group_counter[vertex_name] += 1
 
                 case "set_attributes":
                     # Set attributes for each vertex. Presently, this is just

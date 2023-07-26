@@ -26,7 +26,7 @@ def main(argv=None):
         # just fall back to retrieving the system arguments.
         argv = [*sys.argv[1:], *argv] if argv is not None else sys.argv[1:]
         config = parse_cli_args(argv, default_settings={
-            'theme': 'simple',
+            'theme': 'basic',
         })
 
         # Read information about the CLI application.
@@ -47,10 +47,11 @@ def main(argv=None):
             # List all plugins.
             if config.override_action == 'list_plugins':
                 if config.output_format == 'json':
-                    print(controller.plugins.render_plugins_json())
+                    write_stdout_from_data(controller.plugins.render_plugins_json())
                 else:
-                    print()
-                    print(controller.plugins.render_plugins_table())
+                    write_stdout_from_data("\n")
+                    write_stdout_from_data(controller.plugins.render_plugins_table())
+                write_stdout_from_data("\n")
 
             # Exit after handling the override action.
             exit(0)

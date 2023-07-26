@@ -1,9 +1,32 @@
+"""
+These are two legacy themes (with color variants) from the original agtool.
+Specifically, the "simple" and "classic" themes. These themes are very simple
+and only format edges based on whether they are grouped, and/or recovery edges.
+Nodes are not colored at all.
+
+These themes are superseded by the "basic" theme.
+
+They do not seem to have been used much, even in the original agtool and had to be
+patched in the original agtool to function properly. They are included here for
+completeness and backwards compatibility, but you'll probably enjoy some of the newer
+themes more!
+
+One feature added here, is the ability to colorize the edges based on a globally
+unique group ID. This color codes all conjunctions on the access method graph in
+distinct colors - which identifies the total set of access methods a user has on their
+graph. Or, perhaps more importantly, would highlight a lack of two-factor access
+methods (if everything is colored uniquely, then there are no conjunctions).
+"""
+
 from typing import Optional, Final
 
 from agtool.struct.vertex import Vertex, VertexEdge
 from plugins.writers.graphviz.graphviz_writer import AGGraphvizWriterTheme, AGGraphvizVertexStatistics
 
-LEGACY_COLOR_SCHEME = [
+# The legacy color scheme is a list of colors that are used to colorize the
+# vertices in the graph. The colors are used in order, and then wrap around
+# to the beginning of the list (with a warning).
+LEGACY_EDGE_COLOR_SCHEME = [
     {"color": "black"},
     {"color": "blue"},
     {"color": "red"},
@@ -26,8 +49,8 @@ LEGACY_COLOR_SCHEME = [
 
 # The legacy color scheme is a list of colors that are used to colorize the
 # vertices in the graph. The colors are used in order, and then wrap around
-# to the beginning of the list.
-LEGACY_GRAYSCALE_SCHEME: Final = [
+# to the beginning of the list (with a warning).
+LEGACY_EDGE_GRAYSCALE_SCHEME: Final = [
     {"color": "black", "style": "solid"},
     {"color": "black", "style": "dashed"},
     {"color": "black", "style": "dotted"},
@@ -55,7 +78,7 @@ class AGGraphvizThemeSimple(AGGraphvizWriterTheme):
     Edges are colorized based on the target vertex.
     """
 
-    scheme = LEGACY_GRAYSCALE_SCHEME
+    scheme = LEGACY_EDGE_GRAYSCALE_SCHEME
 
     @classmethod
     def name(cls) -> str: return "simple"
@@ -64,6 +87,14 @@ class AGGraphvizThemeSimple(AGGraphvizWriterTheme):
     def description(cls) -> str: return "Simple theme. " \
                                         "No special formatting. Edges are colored in grayscale."
 
+    @classmethod
+    def supported_features(cls) -> Optional[dict[str, set[str]]]:
+        return {"grouping": {"default", "unique"}}
+
+    def compute_node_attributes(self, vertex: Vertex, name: str) -> Optional[dict[str, str]]:
+        if vertex.vertex_type == "pattern":
+            return {"shape": "box3d", "fillcolor": "gray", "style": "filled"}
+
     def compute_edge_attributes(self,
                                 from_node: Vertex,
                                 from_node_statistics: AGGraphvizVertexStatistics,
@@ -71,15 +102,21 @@ class AGGraphvizThemeSimple(AGGraphvizWriterTheme):
                                 to_node: Vertex,
                                 to_node_statistics: AGGraphvizVertexStatistics) -> Optional[dict[str, str]]:
 
-        if int(edge.group_id / len(self.scheme)) > 0:
-            self.plugin.controller.logger.warning(f"There were more groups than colors in the color scheme. "
-                                                  f"The color scheme will wrap around.")
+        group_id = edge.unique_group_id if self.get_setting('grouping') == 'unique' else edge.group_id
 
+        if int(group_id / len(self.scheme)) > 0:
+            # TODO: should this raise an error instead?
+
+            self.plugin.controller.logger.warning(f"There were more groups than colors in the color scheme. "
+                                                  f"The color scheme has wrapped around. This may cause confusion.")
+
+            # This message will repeat every time we call this function after we're out of colors.
             self.plugin.controller.logger.warning(f"Consider using a different theme, or increasing the number of "
                                                   f"colors in the color scheme. There are currently "
-                                                  f"{len(self.scheme)} colors in the color scheme.")
+                                                  f"{len(self.scheme)} colors in the color scheme, but we needed "
+                                                  f"{group_id + 1}.")
 
-        return self.scheme[edge.group_id % len(self.scheme)]
+        return self.scheme[group_id % len(self.scheme)]
 
 
 class AGGraphvizThemeClassic(AGGraphvizThemeSimple):
@@ -89,7 +126,7 @@ class AGGraphvizThemeClassic(AGGraphvizThemeSimple):
     Outputs edges where recovery methods are dashed and normal methods are solid.
     """
 
-    scheme = LEGACY_GRAYSCALE_SCHEME
+    scheme = LEGACY_EDGE_GRAYSCALE_SCHEME
 
     @classmethod
     def name(cls) -> str: return "classic"
@@ -104,7 +141,6 @@ class AGGraphvizThemeClassic(AGGraphvizThemeSimple):
                                 edge: VertexEdge,
                                 to_node: Vertex,
                                 to_node_statistics: AGGraphvizVertexStatistics) -> Optional[dict[str, str]]:
-
         # Inherit the edge attributes from the 'simple' theme (if there are any).
         attributes = super().compute_edge_attributes(from_node,
                                                      from_node_statistics,
@@ -124,7 +160,7 @@ class AGGraphvizThemeSimpleColor(AGGraphvizThemeSimple):
     See `AGGraphvizThemeSimple`.
     """
 
-    scheme = LEGACY_COLOR_SCHEME
+    scheme = LEGACY_EDGE_COLOR_SCHEME
 
     @classmethod
     def name(cls) -> str: return "simple-color"
@@ -138,7 +174,7 @@ class AGGraphvizThemeClassicColor(AGGraphvizThemeClassic):
     See `AGGraphvizThemeClassic`.
     """
 
-    scheme = LEGACY_COLOR_SCHEME
+    scheme = LEGACY_EDGE_COLOR_SCHEME
 
     @classmethod
     def name(cls) -> str: return "classic-color"

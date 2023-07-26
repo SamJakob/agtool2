@@ -99,11 +99,11 @@ def parse_cli_args(args: Sequence[str], default_settings: Optional[dict[str, str
     # -it and -ot are aliases for --input-type and --output-type, respectively.
     # -if and -of have been avoided to prevent confusion with input and output
     # file arguments.
-    parser.add_argument("-it", '--input-type', '--input-format',
+    parser.add_argument("-it", '-ifmt', '--input-type', '--input-format',
                         action="store", dest="input_format",
                         help="sets the expected input format (guessed heuristically by default)")
 
-    parser.add_argument("-ot", '--output-type', '--output-format',
+    parser.add_argument("-ot", '-ofmt', '--output-type', '--output-format',
                         action="store", dest="output_format", default='png',
                         help="sets the desired output format (guessed heuristically by default)")
 
