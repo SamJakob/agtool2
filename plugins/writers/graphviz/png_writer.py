@@ -1,4 +1,5 @@
 import subprocess
+from abc import ABC, abstractmethod
 
 from agtool.core import Controller
 from agtool.error import AGPluginExternalError
@@ -6,14 +7,28 @@ from agtool.interfaces.writer import AGWriter
 from agtool.struct.graph import Graph
 
 
-class AGPNGWriter(AGWriter):
+class _AGGraphvizConverter(AGWriter, ABC):
     """
-    Writes an account graph to a PNG file.
+    A base class for GraphViz-based writers.
+
+    Classes extending this class should implement the `format` property, which
+    will cause the `default_file_extension` property to return the correct file
+    extension for the format and for the correct logic to be implemented to
+    render that file format based on a produced DOT file.
     """
 
     @property
+    @abstractmethod
+    def default_file_extension(self):
+        """
+        The file format to render to.
+
+        **This should be implemented by subclasses.**
+        """
+
+    @property
     def name(self) -> str:
-        return "PNG Writer"
+        return f"{self.default_file_extension.upper()} Writer (GraphViz)"
 
     @property
     def version(self) -> str:
@@ -27,17 +42,13 @@ class AGPNGWriter(AGWriter):
     def license(self) -> str:
         return "MIT"
 
-    @property
-    def default_file_extension(self) -> str:
-        return "png"
-
     def __init__(self, controller: Controller):
         super().__init__(controller)
 
         self.controller = controller
         """
-        The application controller. (Overridden to be the specific `Controller` implementation type as this
-        plugin interacts with other plugins from the plugin registry.)
+        The application controller. (Overridden to be the specific `Controller` implementation type instead
+        of `AbstractController` as this plugin interacts with other plugins from the plugin registry.)
         """
 
     def write_graph(self, graph: Graph, destination_label: str) -> bytes:
@@ -63,8 +74,8 @@ class AGPNGWriter(AGWriter):
 
         # Use the GraphViz command-line tool to render the DOT file as a PNG file.
         try:
-            self.controller.logger.info("Rendering DOT file as PNG file...")
-            result = subprocess.run(['dot', '-Tpng'], capture_output=True, input=dot_data)
+            self.controller.logger.info(f"Rendering DOT file as {self.default_file_extension.upper()} file...")
+            result = subprocess.run(['dot', f'-T{self.default_file_extension}'], capture_output=True, input=dot_data)
 
             if result.returncode != 0:
                 if len(result.stderr) > 0:
@@ -73,7 +84,8 @@ class AGPNGWriter(AGWriter):
                 raise AGPluginExternalError(
                     plugin_id=self.id,
                     description=f"The GraphViz command-line tool exited with a non-zero exit code whilst "
-                                f"rendering the output PNG file ({result.returncode}).",
+                                f"rendering the output {self.default_file_extension.upper()} file "
+                                f"({result.returncode}).",
                 )
 
             self.controller.logger.success("Rendering completed successfully.")
@@ -84,3 +96,28 @@ class AGPNGWriter(AGWriter):
                 plugin_id=self.id,
                 description="The GraphViz command-line tool was not found. Please install GraphViz and try again.",
             )
+
+
+class AGPngWriter(_AGGraphvizConverter, AGWriter):
+    """
+    Writes an account graph to a PNG file.
+    """
+
+    @property
+    def default_file_extension(self) -> str: return "png"
+
+
+class AGPdfWriter(_AGGraphvizConverter, AGWriter):
+    """
+    Writes an account graph to a PDF file.
+    """
+
+    @property
+    def default_file_extension(self) -> str: return "pdf"
+
+
+class AGSvgWriter(_AGGraphvizConverter, AGWriter):
+    """Writes an account graph to a SVG file."""
+
+    @property
+    def default_file_extension(self) -> str: return "svg"

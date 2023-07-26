@@ -157,6 +157,10 @@ class AGPluginRegistry(AbstractPluginRegistry):
                 # If the node is a class definition, check if one of its bases is
                 # subclass_of or a subclass of subclass_of.
                 if isinstance(node, AstClassDef):
+                    # Ignore classes where the name starts with an underscore.
+                    if node.name.startswith("_"):
+                        continue
+
                     # Get the list of base classes.
                     bases = [base.id for base in cast(any, node.bases)]
 
@@ -228,14 +232,19 @@ class AGPluginRegistry(AbstractPluginRegistry):
             except Exception as e:
                 raise AGPluginLoadError(f"Failed to parse source for {os.path.basename(file)}: {e}")
 
+            # Then attempt to load all plugins from the file.
             for node in file_source.body:
                 # If the node is a class definition, check if one of its bases is
                 # AGPlugin or a subclass of AGPlugin.
                 if isinstance(node, AstClassDef):
-                    is_plugin = False
+                    # Ignore classes where the name starts with an underscore.
+                    if node.name.startswith("_"):
+                        continue
 
-                    bases = [base.id for base in cast(any, node.bases)]
+                    # Otherwise, scan the class to see if it is a plugin.
+                    is_plugin = False
                     plugin_type = None
+                    bases = [base.id for base in cast(any, node.bases)]
 
                     if "AGPlugin" in bases:
                         plugin_type = AGPlugin
