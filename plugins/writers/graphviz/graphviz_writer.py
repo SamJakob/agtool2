@@ -1,10 +1,15 @@
+import itertools
 import os.path
+import random
+import string
 from abc import abstractmethod, ABC
+from binascii import crc32
 from collections import deque
 from typing import Optional, Type, TypeVar, Final
 
-from agtool.core import Controller
+from agtool.abstract import AbstractController
 from agtool.error import AGPluginExternalError
+from agtool.helpers.numeric import required_permutation_objects
 from agtool.helpers.text import to_upper_camel_case
 from agtool.interfaces.writer import AGWriter
 from agtool.struct.graph import Graph
@@ -117,7 +122,7 @@ class AGGraphvizWriter(AGWriter):
     def default_file_extension(self) -> str:
         return "dot"
 
-    def __init__(self, controller: Controller):
+    def __init__(self, controller: AbstractController):
         # Initialize the plugin.
         super().__init__(controller)
 
@@ -242,8 +247,12 @@ class AGGraphvizWriter(AGWriter):
 
         # Compute the DOT nodes and edges for the graph, based on those in the
         # agtool graph data structure.
-        nodes = AGGraphvizWriter._compute_dot_nodes(graph, theme)
-        edges = AGGraphvizWriter._compute_dot_edges(graph,
+        nodes = AGGraphvizWriter._compute_dot_nodes(controller=self.controller,
+                                                    graph=graph,
+                                                    theme=theme)
+
+        edges = AGGraphvizWriter._compute_dot_edges(controller=self.controller,
+                                                    graph=graph,
                                                     statistics=statistics,
                                                     theme=theme)
 
@@ -292,7 +301,9 @@ digraph {graph_name} {{
         return AGGraphvizWriter._dict_to_graphviz_attributes(graph_attributes, statements=True)
 
     @staticmethod
-    def _compute_dot_nodes(graph: Optional[Graph], theme: Optional[_ThemeType] = None) -> str:
+    def _compute_dot_nodes(controller: AbstractController,
+                           graph: Optional[Graph],
+                           theme: Optional[_ThemeType] = None) -> str:
         """
         Computes the DOT nodes for the given graph.
 
@@ -305,6 +316,48 @@ digraph {graph_name} {{
 
         nodes = []
 
+        counter = 0
+        """The number of vertices that have been rendered."""
+
+        labels = None
+        # Note that labels = None => use node name.
+        # (as opposed to labels = "" or labels = "obscure" => use no label.)
+
+        if 'labels' in controller.settings:
+            labels = controller.settings['labels'].strip().lower()
+
+        generated_ids = None
+        """A set of random words that is guaranteed to be big enough to have one word for each vertex."""
+
+        shuffled_vertex_indices = None
+        """
+        A shuffled lookup table for the vertex indices.
+        This can be used when a unique random label is needed for a vertex.
+        """
+
+        if labels in {"hash", "random"}:
+            # If the label is set to "obfuscate", we'll use a randomized
+            # label.
+            charset = [*string.ascii_uppercase, *string.digits]
+            generated_ids = list(itertools.permutations(charset,
+                                                        r=required_permutation_objects(len(charset),
+                                                                                       len(graph.vertices))))
+            generated_ids = ["".join(word) for word in generated_ids]
+
+            """A set of random words that is guaranteed to be big enough to have one word for each vertex."""
+
+            # Create a shuffled lookup table for the vertex indices.
+            # This can be used when a unique random label is needed for a vertex.
+            shuffled_vertex_indices: Optional[dict[str, int]] = {}
+            _indices = list(range(len(graph.vertices)))
+            random.shuffle(_indices)
+            for key in graph.vertices.keys():
+                shuffled_vertex_indices[key] = _indices.pop()
+
+        # Stores used labels.
+        used_labels = set()
+
+        # Now, loop over all the vertices in the graph.
         for vertex_name, vertex in graph.vertices.items():
             # Compute the node attributes.
             node_attributes = AGGraphvizWriter.DEFAULT_NODE_ATTRIBUTES if not theme or theme.retain_defaults else {}
@@ -312,15 +365,53 @@ digraph {graph_name} {{
                 {} if not theme else (theme.compute_node_attributes(vertex, vertex_name) or {})
             )
 
+            # Compute a label for the node if 'labels' has been specified as a setting.
+            # (Otherwise, we'll just use the node name).
+            if labels is not None:
+                if labels in {"", "none", "hide", "obscure"}:
+                    # If the label is set to "obscure", we'll use an empty label.
+                    node_attributes['label'] = ""
+                elif labels == "name":
+                    # If the label is set explicitly to "name", we'll use the node name.
+                    node_attributes['label'] = vertex_name
+                elif labels == "type":
+                    # If the label is set to "type", we'll use the vertex type.
+                    node_attributes['label'] = vertex.vertex_type
+                elif labels == "name,type":
+                    node_attributes['label'] = f"{vertex_name} ({vertex.vertex_type})"
+                elif labels == "hash":
+                    # If the label is set to "hash", we'll use a hash of the node name.
+                    index = None
+                    label = None
+
+                    while index is None:
+                        index = crc32(vertex_name.encode('utf-8')) % len(generated_ids)
+                        if f"#{generated_ids[index]}" in used_labels:
+                            index = (index + 1) % len(generated_ids)
+
+                        label = f"#{generated_ids[index]}"
+                        used_labels.add(label)
+
+                    node_attributes['label'] = label
+                elif labels == "random":
+                    # If the label is set to "random", we'll use a random label.
+                    # NOTE that this will result in a different label each time
+                    # the graph is rendered.
+                    node_attributes['label'] = f"#{shuffled_vertex_indices[vertex_name]}"
+                elif labels == "counter":
+                    node_attributes['label'] = f"{counter}"
+
             # Serialize the attributes to a string.
             attributes = AGGraphvizWriter._dict_to_graphviz_attributes(node_attributes)
 
             nodes.append(f"    {vertex_name} [{attributes}];")
+            counter += 1
 
         return "\n".join(nodes)
 
     @staticmethod
-    def _compute_dot_edges(graph: Optional[Graph],
+    def _compute_dot_edges(controller: AbstractController,
+                           graph: Optional[Graph],
                            statistics: dict[str, AGGraphvizVertexStatistics],
                            theme: Optional[_ThemeType] = None) -> str:
         """
