@@ -7,7 +7,6 @@ import pkgutil
 import sys
 import traceback
 from ast import ClassDef as AstClassDef, ImportFrom as AstImportFrom, parse as parse_ast
-from modulefinder import ModuleFinder
 from pathlib import Path
 from typing import Dict, List, Type, cast
 

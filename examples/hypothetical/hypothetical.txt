@@ -1,0 +1,169 @@
+## Let us model a hypothetical account setup to demonstrate how the text
+## file format works.
+
+## To start with, all Vertices must be declared and their types specified.
+##
+## The format is:
+## <type>: <vertex...>
+##
+## Where <vertex...> denotes a comma-separated list of one or more vertices.
+## It is an error to try to reference a Vertex before it has been declared.
+##
+## You may declare a Vertex type at any point in the file, provided it is
+## before the usage of that Vertex (i.e., before referencing it in a
+## relation), but we would recommend for readability (and sanity!) that you
+## place all declarations at the top of the file!
+
+# (Vertex Types)
+
+## Tip! You can use an underscore as a space character if you set
+## "-s labels=human" on the command-line invocation. So, Phone_PIN
+## will be rendered as "Phone PIN".
+
+biometric: Fingerprint
+password: Phone_PIN, Password, SMS_Code, ATM_Card_PIN, Banking_OTP, Banking_Password
+device: Locked_Phone, Phone, ATM_Card, Banking_Security_Device
+account: Mail, Mail_data, Ecommerce, Banking
+
+## Next, you can define access relations. Let's discuss some possibly quite
+## common Access Relations...
+
+# (Access Relations)
+
+## Passwords give access to accounts.
+## Usernames are generally not modeled as they are ordinarily a practicality
+## rather than a security measure, so they are largely irrelevant. Of course,
+## this is all up to you!
+Password -> Mail
+
+## (Locked Devices)
+
+## To unlock a locked phone, both the phone's PIN and the locked phone itself
+## are necessary (i.e., someone needs to know the PIN *and* have physical
+## access to the device to unlock it).
+## We use the locked phone to indicate the need for this physical access. When
+## the name of a vertex has "locked" in it, the diagonal borders are
+## automatically added.
+Phone_PIN, Locked_Phone -> Phone
+
+## Similarly to the above, biometrics can also be used.
+Fingerprint, Locked_Phone -> Phone
+
+## Note in both of these cases, that we have a **conjunction**. That is, it
+## requires BOTH the locked phone and a method of accessing that locked phone.
+## This is denoted by specifying both vertices on the LHS of the relation.
+## All vertices on the LHS of the relation are a conjunction providing access
+## to ANY of the vertices on the right.
+
+## (Data-only access)
+
+## Whilst there are 'administrative' options for an online mail account, such
+## as changing their email address, or its password, or other sensitive
+## options, these are not normally readily available without performing
+## additional authentication (such as logging into a web session).
+## So, somebody's phone will ordinarily provide access only to the data of
+## their email account (the emails) as opposed to full access to administer
+## the account.
+Phone -> Mail_data
+
+## (Full Access)
+
+## Naturally, having full access to the mail account, will provide access to
+## the data it contains.
+Mail -> Mail_data
+
+## (Recovery Methods)
+
+## Recovery modes (naturally, alternative to primary modes of authentication)
+## provide a user with a means of gaining access to their account, should they
+## lose access to their primary means of authentication.
+##
+## Recovery modes are denoted in agtool with => instead of ->. (Note that this
+## is a syntactic sugar for -rec> (where 'rec' is an edge label). You can define
+## your own syntactic sugars with the 'macro' capability.
+
+## In this case, the Mail data alone is sufficient to recover access to the
+## Ecommerce account. (Just being able to get the recovery link from the email
+## received provides a means of access).
+Mail_data => Ecommerce
+
+## Here's an interesting one:
+SMS_Code => Mail
+
+## ...but what provides access to the SMS_Code? Why the cell phone, of course!
+## The exact modeling of this depends on your assumptions, choices and
+## interpretation.
+##
+## See, if you're able to read a person's notifications off the device regardless
+## of it being unlocked (many people do not disable lock screen previews when
+## the device is locked!), then just having the Locked_Phone is sufficient to
+## gain access to the SMS recovery code. However, if not then it would be the
+## Phone.
+##
+## You may wish to introduce a Phone_Notifications vertex to represent the access
+## required to read them and which they provide for more detailed modeling (of
+## type "password" seems most appropriate), but for more simplistic models it
+## may be sufficient to just map SMS_Code from Locked_Phone or Phone accordingly.
+Phone -> SMS_Code
+## (Here we've assumed the owner of the device has opted to conceal notification
+## previews when their device is locked).
+
+## (Shared Access Methods)
+
+## Of course, the most interesting part of the account graph is when users
+## inadvertently introduce links between their accounts. For instance, by sharing
+## a password, a user is implicitly linking their accounts.
+##
+## Indeed, this is why on many graphs we will have a "Password" or "Password_N"
+## vertex - because people generally do not make one password per-service - or
+## even one per a large subset of all of their services. Check out:
+## "Google and Harris Poll 2019" Online Security Survey".
+## https://services.google.com/fh/files/blogs/google_security_infographic.pdf
+
+## We see, here, that (of course) by referencing the same "Password" vertex as
+## before, an additional relation is created. Depending on your theme options
+## edges may or may not be colored. If you're using the default (minimal/chi)
+## theme, both out-edges of Password will be solid black with hollow arrowheads,
+## to show that they are primary, lone, access methods (lone means not part of
+## a conjunction - so the outgoing vertex can be used exclusively to access the
+## vertex that the edge points to).
+Password -> Ecommerce
+
+## (Isolated Vertices)
+
+## For demonstration purposes, in this example, we're going to show an isolated
+## cluster of vertices. In practice, these might be linked somewhat to the main
+## cluster of accounts (most setups will have a "main cluster") - e.g., via some
+## form of recovery method but ideally they would be separate as this totally
+## avoids accidentally introducing implicit links. (Though it might result in a
+## smaller lockout base).
+
+## Typically (although not so much with the advent of mobile phone banking), banks
+## issue some kind of security device that serve as a two-factor authentication
+## method. Often, one will insert an ATM card into the security device and enter the
+## PIN for the ATM Card which will generate a One-Time Pad to access one's online
+## banking account or to authorize a transaction over the telephone.
+##
+## There's lots of fun semantics to argue about here. For instance, the way the
+## ATM_Card, ATM_Card_PIN and the Banking_Security_Device interact to yield the
+## Banking_OTP can be represented in a few ways, owing to the somewhat cyclic
+## nature of the ATM_Card and Banking_Security_Device interaction -- the ATM_Card
+## contains the cryptographic hardware and material necessary to generate the
+## Banking_OTP but the Banking_Security_Device is needed to deliver the user's
+## PIN to the Smartcard chip on the ATM_Card and presumably mix in some secret
+## operations or material of its own (e.g.,  when the user has to "pair" a
+## Banking_Security_Device with their account).
+##
+## Here, we thus show that the ATM_Card (unlocked by ATM_Card_PIN) AND the
+## Banking Security Device are BOTH necessary to obtain the Banking_OTP, which
+## seems the most sensible in this scenario, but depending on the guarantees
+## of the system, one might consider that only the Banking_Security_Device is
+## capable of making use of the ATM_Card and thus claim that Banking_Security_Device
+## in fact gives access to ATM_Card (this is possibly more correct if it were known
+## that Banking_Security_Device was solely an input method or was otherwise
+## interchangeable and thus only served to "give access" to the ATM_Card as a glorified
+## KVM).
+ATM_Card_PIN -> ATM_Card
+ATM_Card, Banking_Security_Device -> Banking_OTP
+Banking_Password, Banking_OTP -> Banking
+

@@ -374,6 +374,10 @@ digraph {graph_name} {{
                 elif labels == "name":
                     # If the label is set explicitly to "name", we'll use the node name.
                     node_attributes['label'] = vertex_name
+                elif labels == "human":
+                    # If the label is set to "human", we'll use the human-readable name.
+                    # This is as simple as replacing underscores with spaces.
+                    node_attributes['label'] = vertex_name.replace("_", " ")
                 elif labels == "type":
                     # If the label is set to "type", we'll use the vertex type.
                     node_attributes['label'] = vertex.vertex_type
