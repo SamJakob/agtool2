@@ -83,7 +83,7 @@ def main(argv=None):
         # Read the graph from the input file.
         graph = reader.read_graph(config.input_file, read_file_as_string(
             config.input_file,
-            working_dir=controller.base_path
+            working_dir=os.getcwd()
         ))
 
         # Identify the output file extension (if one was specified).
@@ -151,7 +151,7 @@ def main(argv=None):
                 write_stdout_from_data(output_data)
             else:
                 # Otherwise, we'll write to a file.
-                write_file_from_data(config.output_file, output_data, working_dir=controller.base_path)
+                write_file_from_data(config.output_file, output_data, working_dir=os.getcwd())
                 controller.logger.success(f"Successfully wrote to output file: "
                                           f"{config.output_file} (kind: {config.output_format})")
         except PermissionError:
