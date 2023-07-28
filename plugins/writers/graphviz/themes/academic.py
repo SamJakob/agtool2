@@ -38,7 +38,7 @@ class AGGraphvizThemeSwiss(AGGraphvizThemeMinimal):
     def description(cls):
         return "The theme used in the Swiss paper. Colors vertices by its own types."
 
-    def compute_node_attributes(self, vertex: Vertex, name: str) -> Optional[dict[str, str]]:
+    def compute_node_attributes(self, vertex: Vertex, name: str, label: str) -> Optional[dict[str, str]]:
         """Colors nodes based on the coloring used in the Swiss paper."""
 
         attributes = {

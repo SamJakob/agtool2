@@ -79,6 +79,7 @@ class AGGraphvizThemeSimple(AGGraphvizWriterTheme):
     """
 
     scheme = LEGACY_EDGE_GRAYSCALE_SCHEME
+    """The color scheme to use for coloring edges."""
 
     @classmethod
     def name(cls) -> str: return "simple"
@@ -91,7 +92,7 @@ class AGGraphvizThemeSimple(AGGraphvizWriterTheme):
     def supported_features(cls) -> Optional[dict[str, set[str]]]:
         return {"grouping": {"default", "unique"}}
 
-    def compute_node_attributes(self, vertex: Vertex, name: str) -> Optional[dict[str, str]]:
+    def compute_node_attributes(self, vertex: Vertex, name: str, label: str) -> Optional[dict[str, str]]:
         if vertex.vertex_type == "pattern":
             return {"shape": "box3d", "fillcolor": "gray", "style": "filled"}
 

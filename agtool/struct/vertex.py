@@ -52,6 +52,41 @@ class Vertex:
         """
         return {edge.dependency.name: edge.dependency for edge in self.edges}
 
+    def is_incoming(self, vertex: _VertexType) -> bool:
+        """Checks if the given vertex is incoming to this vertex. See also `is_incoming_name`."""
+        for edge in self.edges:
+            if edge.dependency == vertex:
+                return True
+
+        return False
+
+    def is_incoming_name(self, vertex_name: str, case_insensitive: bool = False) -> bool:
+        """
+        Checks if the given vertex name is incoming to this vertex.
+
+        Similar to is_incoming, but instead of checking for a vertex, it checks
+        for a vertex name.
+
+        :param vertex_name: The name of the vertex to check for.
+        :param case_insensitive: Whether to ignore case when checking for the
+            vertex name.
+        :return: True if the vertex name is incoming to this vertex, false
+            otherwise.
+        """
+        test_vertex_name = vertex_name
+        if case_insensitive:
+            test_vertex_name = vertex_name.lower()
+
+        for edge in self.edges:
+            dependency_name = edge.dependency.name
+            if case_insensitive:
+                dependency_name = dependency_name.lower()
+
+            if dependency_name == test_vertex_name:
+                return True
+
+        return False
+
     def __str__(self, with_edges=False):
         edges_str = ''
 

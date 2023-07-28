@@ -23,7 +23,6 @@ from agtool.struct.vertex import Vertex, VertexEdge
 from plugins.writers.graphviz.graphviz_writer import AGGraphvizWriterTheme, AGGraphvizVertexStatistics, AGGraphvizWriter
 
 BASIC_EDGE_COLOR_SCHEME: Final = [
-    "black",
     "blue",
     "red",
     "green",
@@ -46,6 +45,9 @@ BASIC_EDGE_COLOR_SCHEME: Final = [
 
 
 class AGGraphvizThemeBasic(AGGraphvizWriterTheme):
+
+    scheme = BASIC_EDGE_COLOR_SCHEME
+    """The color scheme to use for coloring edges."""
 
     @classmethod
     def name(cls) -> str:
@@ -85,7 +87,7 @@ class AGGraphvizThemeBasic(AGGraphvizWriterTheme):
         See `compute_edge_attributes` for more information.
         """
 
-    def compute_node_attributes(self, vertex: Vertex, name: str) -> Optional[dict[str, str]]:
+    def compute_node_attributes(self, vertex: Vertex, name: str, label: str) -> Optional[dict[str, str]]:
         """Colors nodes based on the coloring used in the CHI2022 paper."""
 
         attributes = {
@@ -207,15 +209,15 @@ class AGGraphvizThemeBasic(AGGraphvizWriterTheme):
                 # Load the counter for this edge type, and increment it (also mapping it into our range of colors).
                 # We avoid the first color (black) as it is used for arrows that are not a part of a conjunction.
                 # Then write the counter back to the dictionary (ready for next iteration).
-                counter = (self._counters[counter_type_a][counter_type_b] % (len(BASIC_EDGE_COLOR_SCHEME) - 1)) + 1
-                self._counters[counter_type_a][counter_type_b] = counter
+                counter = (self._counters[counter_type_a][counter_type_b] % len(self.scheme))
+                self._counters[counter_type_a][counter_type_b] = counter + 1
 
                 if with_memoization:
                     # Memoize the group ID.
-                    self._memoized_group_ids[edge_id] = BASIC_EDGE_COLOR_SCHEME[counter]
+                    self._memoized_group_ids[edge_id] = self.scheme[counter]
 
                 # Assign the color to the edge, and increment the counter.
-                attributes = attributes | {'color': BASIC_EDGE_COLOR_SCHEME[counter]}
+                attributes = attributes | {'color': self.scheme[counter]}
 
         return attributes
 

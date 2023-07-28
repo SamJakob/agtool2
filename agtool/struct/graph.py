@@ -1,8 +1,8 @@
-from typing import Dict, Optional, Union
+from typing import Optional, Union
 
 from agtool.struct.vertex import Vertex, VertexEdge
 
-VertexDictionary = Dict[str, Vertex]
+VertexDictionary = dict[str, Vertex]
 """
 A dictionary of vertices, as held within a graph.
 The key is the name of the vertex and the value is the vertex itself.
@@ -69,12 +69,54 @@ class Graph:
         the vertex.
         """
 
-    def add_vertex(self, vertex):
+    def add_vertex(self, vertex: Vertex):
         """Add a given vertex to the graph."""
         if vertex not in self.vertices:
             self.vertices[vertex.name] = vertex
         else:
             raise KeyError(f"Vertex, {vertex.name}, already exists in the graph.")
+
+    def has_vertex_with_name(self, vertex_name: str, case_insensitive: bool = False) -> bool:
+        """
+        Returns true if the graph has a vertex with the given name.
+        See also `has_vertex` (for checking based on an instance, rather than
+        a name).
+
+        You would probably want to leave case_insensitive as false if you are
+        using the vertex name as a unique identifier (this ensures the exact
+        vertex name is in the graph). However, if you are using the vertex name
+        attempt to look up a vertex (e.g., you don't have an exact vertex object
+        you want to look up, but you have a name and want to see if the graph
+        has a vertex with that name), then you could set case_insensitive to
+        true.
+
+        :param vertex_name: The name of the vertex to check for.
+        :param case_insensitive: If true, the vertex name will be compared
+            case-insensitively.
+        :return: True if the graph has a vertex with the given name. Otherwise, false.
+        """
+        if not case_insensitive:
+            # If case matters (i.e., case sensitive or NOT case insensitive),
+            # then we can just check if the vertex name is in the dictionary.
+            return vertex_name in self.vertices
+        else:
+            # Otherwise, we need to check each vertex name in the dictionary
+            # to see if it matches the given vertex name.
+            return any(vertex_name.lower() == vertex_name.lower() for vertex_name in self.vertices)
+
+    def has_vertex(self, vertex: Vertex):
+        """
+        Checks if the graph contains the specified vertex object.
+
+        If you only care about the name of the vertex, `has_vertex_with_name` should
+        suffice. This method is useful if you want to check if the graph contains
+        a specific vertex object (e.g., you want to check if the graph contains
+        exactly this vertex instance).
+
+        :param vertex: The vertex to check for.
+        :return: True if the graph contains the vertex. Otherwise, false.
+        """
+        return vertex in self.vertices.values()
 
     @staticmethod
     def __vertex_list_to_dict(vertices: list[Vertex]):

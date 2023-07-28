@@ -251,8 +251,7 @@ class AGGraphvizWriter(AGWriter):
                                                     graph=graph,
                                                     theme=theme)
 
-        edges = AGGraphvizWriter._compute_dot_edges(controller=self.controller,
-                                                    graph=graph,
+        edges = AGGraphvizWriter._compute_dot_edges(graph=graph,
                                                     statistics=statistics,
                                                     theme=theme)
 
@@ -361,28 +360,28 @@ digraph {graph_name} {{
         for vertex_name, vertex in graph.vertices.items():
             # Compute the node attributes.
             node_attributes = AGGraphvizWriter.DEFAULT_NODE_ATTRIBUTES if not theme or theme.retain_defaults else {}
-            node_attributes = node_attributes | (
-                {} if not theme else (theme.compute_node_attributes(vertex, vertex_name) or {})
-            )
 
             # Compute a label for the node if 'labels' has been specified as a setting.
             # (Otherwise, we'll just use the node name).
-            if labels is not None:
+            # We'll also ensure 'label' is not already in the node attributes.
+            precomputed_label = None
+
+            if labels is not None and 'label' not in node_attributes:
                 if labels in {"", "none", "hide", "obscure"}:
                     # If the label is set to "obscure", we'll use an empty label.
-                    node_attributes['label'] = ""
+                    precomputed_label = ""
                 elif labels == "name":
                     # If the label is set explicitly to "name", we'll use the node name.
-                    node_attributes['label'] = vertex_name
+                    precomputed_label = vertex_name
                 elif labels == "human":
                     # If the label is set to "human", we'll use the human-readable name.
                     # This is as simple as replacing underscores with spaces.
-                    node_attributes['label'] = vertex_name.replace("_", " ")
+                    precomputed_label = vertex_name.replace("_", " ")
                 elif labels == "type":
                     # If the label is set to "type", we'll use the vertex type.
-                    node_attributes['label'] = vertex.vertex_type
+                    precomputed_label = vertex.vertex_type
                 elif labels == "name,type":
-                    node_attributes['label'] = f"{vertex_name} ({vertex.vertex_type})"
+                    precomputed_label = f"{vertex_name} ({vertex.vertex_type})"
                 elif labels == "hash":
                     # If the label is set to "hash", we'll use a hash of the node name.
                     index = None
@@ -396,14 +395,26 @@ digraph {graph_name} {{
                         label = f"#{generated_ids[index]}"
                         used_labels.add(label)
 
-                    node_attributes['label'] = label
+                    precomputed_label = label
                 elif labels == "random":
                     # If the label is set to "random", we'll use a random label.
                     # NOTE that this will result in a different label each time
                     # the graph is rendered.
-                    node_attributes['label'] = f"#{shuffled_vertex_indices[vertex_name]}"
+                    precomputed_label = f"#{shuffled_vertex_indices[vertex_name]}"
                 elif labels == "counter":
-                    node_attributes['label'] = f"{counter}"
+                    precomputed_label = f"{counter}"
+
+            # Apply the theme's node attributes.
+            node_attributes = node_attributes | (
+                {} if not theme else (theme.compute_node_attributes(vertex,
+                                                                    name=vertex_name,
+                                                                    label=precomputed_label) or {})
+            )
+
+            # If the theme has specified a label, we'll use that instead of the node name.
+            # Otherwise, we'll use the precomputed label.
+            if precomputed_label is not None and 'label' not in node_attributes:
+                node_attributes['label'] = precomputed_label
 
             # Serialize the attributes to a string.
             attributes = AGGraphvizWriter._dict_to_graphviz_attributes(node_attributes)
@@ -414,8 +425,7 @@ digraph {graph_name} {{
         return "\n".join(nodes)
 
     @staticmethod
-    def _compute_dot_edges(controller: AbstractController,
-                           graph: Optional[Graph],
+    def _compute_dot_edges(graph: Optional[Graph],
                            statistics: dict[str, AGGraphvizVertexStatistics],
                            theme: Optional[_ThemeType] = None) -> str:
         """
@@ -491,12 +501,21 @@ digraph {graph_name} {{
             if key.startswith('_ag_'):
                 continue
 
-            # Escape any double quotes in the value.
-            if '"' in value:
-                value = value.replace('"', '\\"')
+            # Test if the value is supposed to be HTML-like (starts and ends with angle brackets).
+            # (also for now, we'll only do this for the label attribute).
+            value_is_html_like = value.startswith("<") and value.endswith(">") and key == "label"
+
+            # If the value is NOT html-like (i.e., it's a string), we'll wrap it in double quotes
+            # and escape any double quotes in the value.
+            if not value_is_html_like:
+                # Escape any double quotes in the value.
+                if '"' in value:
+                    value = value.replace('"', '\\"')
+
+                value = f'"{value}"'
 
             # Add the attribute to the output.
-            output.append(f"{key}=\"{value}\"{';' if statements else ''}{comment}")
+            output.append(f"{key}={value}{';' if statements else ''}{comment}")
 
         return join_char.join(output)
 
@@ -586,11 +605,21 @@ class AGGraphvizWriterTheme(ABC):
         """
         return True
 
-    def get_setting(self, name: str) -> Optional[str]:
-        """Fetches the requested setting from the controller. Returns none if the setting is not set."""
+    def get_setting(self, name: str, global_setting: bool = False) -> Optional[str]:
+        """
+        Fetches the requested setting from the controller. Returns none if the setting is not set.
 
-        if f'theme.{name}' in self.plugin.controller.settings:
-            return self.plugin.controller.settings[f'theme.{name}']
+        :param name: The name of the setting to fetch.
+        :param global_setting: Whether the setting is a global setting or not. If `True`, the setting
+            will be fetched from the global settings. If `False`, the setting will be fetched from
+            theme settings (i.e., settings that start with `theme.`).
+        :return: The value of the setting, or `None` if the setting is not set.
+        """
+
+        namespace = "" if global_setting else "theme."
+
+        if f'{namespace}{name}' in self.plugin.controller.settings:
+            return self.plugin.controller.settings[f'{namespace}{name}']
 
         return None
 
@@ -609,12 +638,14 @@ class AGGraphvizWriterTheme(ABC):
         Or `None` to not change the attributes.
         """
 
-    def compute_node_attributes(self, vertex: Vertex, name: str) -> Optional[dict[str, str]]:
+    def compute_node_attributes(self, vertex: Vertex, name: str, label: str) -> Optional[dict[str, str]]:
         """
         Returns a dictionary of Graphviz attributes for the given vertex.
 
         :param vertex: The vertex to compute the attributes for.
         :param name: The name of the vertex.
+        :param label: The pre-computed label for the vertex.
+            This can be overridden by the theme.
 
         :return: A dictionary of Graphviz attributes for the given vertex.
         Or `None` to not change the attributes.

@@ -108,7 +108,7 @@ def parse_cli_args(args: Sequence[str], default_settings: Optional[dict[str, str
                         help="sets the desired output format (guessed heuristically by default)")
 
     parser.add_argument('input', help="sets the input file to read from",
-                        action="store")
+                        action="store", nargs='?')
 
     parser.add_argument('-o', '--output', '--output-file',
                         action="store", default=None,
@@ -119,6 +119,14 @@ def parse_cli_args(args: Sequence[str], default_settings: Optional[dict[str, str
                         help="sets a global option which may be read by agtool or its plugins (e.g., -s key=value)")
 
     result = parser.parse_args(args)
+
+    # ---
+
+    if not result.override_action and not result.input:
+        parser.error("the following arguments are required: input")
+        exit(1)
+
+    # ---
 
     return AppConfig(
         override_action=result.override_action,
