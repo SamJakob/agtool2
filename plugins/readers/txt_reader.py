@@ -168,7 +168,7 @@ class AGTxtReader(AGReader):
 
     @property
     def author(self) -> str:
-        return "SamJakob"
+        return "The agtool Authors."
 
     @property
     def license(self) -> str:
