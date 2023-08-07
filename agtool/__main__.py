@@ -26,7 +26,7 @@ def main(argv=None):
         # just fall back to retrieving the system arguments.
         argv = [*sys.argv[1:], *argv] if argv is not None else sys.argv[1:]
         config = parse_cli_args(argv, default_settings={
-            'theme': 'basic',
+            'theme': 'chi',
         })
 
         # Read information about the CLI application.
